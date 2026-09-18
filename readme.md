@@ -2,6 +2,8 @@
 
 Bee My Honey is an economic simulation add-on for Minecraft Bedrock Edition. Players can trade foreign currencies, invest in corporate equities, engage in futures contracts, and utilize an offline cold wallet system using assets harvested by the world's hardworking bees.
 
+[![Bee My Honey Demo](https://raw.githubusercontent.com/Melnus/Bee-My-Honey/refs/heads/main/BeeMyHoney-Thumbnail.jpg)](https://youtu.be/xkHy5lNS2bY)
+
 →日本語訳は[こちら](/readme_jp.md)
 
 ---
