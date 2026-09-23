@@ -1,7 +1,7 @@
 import { world } from "@minecraft/server";
 import { STOCKS } from "../data/market-data.js";
 import { getStockPrice } from "./market-engine.js";
-import { giveItem } from "./bank.js";
+import { giveItem, getAccount } from "./bank.js";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 
@@ -24,8 +24,21 @@ export function getDividendEligibility(player, key) {
   };
 }
 
+// 現金配当（KelpLife Holdingsなど）: 保有評価額に配当率をかけたエメラルドを直接口座に振り込む。
+// 戻り値は振込額（アイテム配当のstockは常にnullを返す）。
 export function giveDividendReward(player, key) {
-  const animal = STOCKS[key].animal;
+  const s = STOCKS[key];
+  if (s.dividendType === "cash") {
+    const price = getStockPrice(key);
+    const holds = player.getDynamicProperty(`acc_stock_${key}`) ?? 0;
+    const value = holds * price;
+    const payout = Math.max(1, Math.round(value * (s.dividendRate ?? 0.05)));
+    const acc = getAccount(player);
+    player.setDynamicProperty("acc_emeralds", acc.emeralds + payout);
+    return payout;
+  }
+
+  const animal = s.animal;
   switch (animal) {
     case "dog":
       giveItem(player, "minecraft:cooked_beef", 4);
@@ -63,7 +76,13 @@ export function giveDividendReward(player, key) {
       giveItem(player, item, 1);
       break;
     }
+    case "parrot":
+      giveItem(player, "minecraft:sugar_cane", 6);
+      giveItem(player, "minecraft:redstone", 4);
+      giveItem(player, "minecraft:quartz", 4);
+      break;
   }
+  return null;
 }
 
 export function claimDividend(player, key) {
@@ -80,6 +99,10 @@ export function claimDividend(player, key) {
   }
 
   player.setDynamicProperty(`div_last_claim_${key}`, world.getDay());
-  giveDividendReward(player, key);
-  player.sendMessage(t(lang, STR.divClaimMsg, t(lang, STOCKS[key].name)));
+  const payout = giveDividendReward(player, key);
+  if (STOCKS[key].dividendType === "cash") {
+    player.sendMessage(t(lang, STR.divClaimCashMsg, t(lang, STOCKS[key].name), payout));
+  } else {
+    player.sendMessage(t(lang, STR.divClaimMsg, t(lang, STOCKS[key].name)));
+  }
 }

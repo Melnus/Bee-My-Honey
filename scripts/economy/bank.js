@@ -1,4 +1,4 @@
-import { world, ItemStack } from "@minecraft/server";
+import { world, ItemStack, EnchantmentTypes } from "@minecraft/server";
 import { CURRENCIES, STOCKS } from "../data/market-data.js";
 import { getCurrencyRate, getStockPrice } from "./market-engine.js";
 import { getLang, t } from "../i18n/lang.js";
@@ -93,6 +93,12 @@ export function getItemCount(player, typeId) {
   return count;
 }
 
+// ブロック化されたアイテムも「素材9個」として換算した合計所持数を返す
+// (例: ダイヤモンド3個 + ダイヤモンドブロック2個 = 3 + 2*9 = 21個)
+export function getItemCountWithBlocks(player, typeId, blockTypeId, unitsPerBlock = 9) {
+  return getItemCount(player, typeId) + getItemCount(player, blockTypeId) * unitsPerBlock;
+}
+
 export function removeItem(player, typeId, amount) {
   let left = amount;
   const container = player.getComponent("minecraft:inventory")?.container;
@@ -127,4 +133,48 @@ export function giveItem(player, typeId, amount) {
     }
     left -= s;
   }
+}
+
+// エンチャント本などに実際のエンチャントを付与して渡す（無ければ無地のまま渡す＝既存挙動と互換）。
+export function giveEnchantedItem(player, typeId, enchant) {
+  const container = player.getComponent("minecraft:inventory")?.container;
+  if (!container) return;
+  const item = new ItemStack(typeId, 1);
+  if (enchant && enchant.id) {
+    try {
+      const comp = item.getComponent("minecraft:enchantable");
+      const type = EnchantmentTypes.get(enchant.id);
+      if (comp && type) comp.addEnchantment({ type, level: enchant.level ?? 1 });
+    } catch (e) {
+      console.warn("[BeeMyHoney] Failed to apply enchantment " + enchant.id + ": " + e);
+    }
+  }
+  const leftover = container.addItem(item);
+  if (leftover && leftover.amount > 0) {
+    player.dimension.spawnItem(leftover, player.location);
+  }
+}
+
+// 素のアイテムだけでは足りない分をブロックを崩して充当し、amount個を取り除く。
+// ブロックを崩すと余りが出る場合は足元へドロップして返す（ロスト防止）。
+// ブロック換算込みでも保有数が足りない場合は何も取り除かず false を返す。
+export function removeItemWithBlocks(player, typeId, blockTypeId, amount, unitsPerBlock = 9) {
+  const rawCount = getItemCount(player, typeId);
+  const blockCount = getItemCount(player, blockTypeId);
+  if (rawCount + blockCount * unitsPerBlock < amount) return false;
+
+  if (rawCount >= amount) {
+    removeItem(player, typeId, amount);
+    return true;
+  }
+
+  if (rawCount > 0) removeItem(player, typeId, rawCount);
+  const remaining = amount - rawCount;
+  const blocksToBreak = Math.ceil(remaining / unitsPerBlock);
+  removeItem(player, blockTypeId, blocksToBreak);
+
+  const change = blocksToBreak * unitsPerBlock - remaining;
+  if (change > 0) giveItem(player, typeId, change);
+
+  return true;
 }

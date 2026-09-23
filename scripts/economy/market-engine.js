@@ -1,8 +1,11 @@
 import { world, system } from "@minecraft/server";
-import { CURRENCIES, STOCKS, COMMODITIES } from "../data/market-data.js";
+import { CURRENCIES, STOCKS, COMMODITIES, FUTURES, MARKET_PATTERNS } from "../data/market-data.js";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { applyBankInterest } from "./bank.js";
+import { applyLoanBilling } from "./loan.js";
+import { applyCardBilling, applyMailOrderPrimeBilling } from "./mail-order.js";
+import { applyInsuranceBilling } from "./insurance.js";
 
 // ==========================================
 // 経済変動エンジン / Economy Fluctuation Engine
@@ -13,27 +16,57 @@ export function getCurrentCycleDay() {
   return (day % 7) + 1;
 }
 
+// 今週アクティブな相場パターンテーブルの番号（0〜MARKET_PATTERNS.length-1）
+export function getMarketPatternIndex() {
+  return world.getDynamicProperty("market_pattern_index") ?? 0;
+}
+
+// 個別銘柄のseedをパターン内の「開始日オフセット」として使い、
+// 同じテーブルを使う週でも銘柄ごとに違う位置から波形が始まるようにする
+function patternValue(seed, day) {
+  const idx = getMarketPatternIndex();
+  const table = MARKET_PATTERNS[idx];
+  const offset = Math.floor(seed) % table.length;
+  return table[(day - 1 + offset + table.length) % table.length];
+}
+
 export function getCurrencyRate(key, day = getCurrentCycleDay()) {
   const c = CURRENCIES[key];
   const seed = world.getDynamicProperty(`curr_seed_${key}`) ?? 1;
-  const sinVal = Math.sin(day * 0.9 + seed);
-  const rate = c.baseRate * (1.0 + sinVal * c.volatility);
+  const val = patternValue(seed, day);
+  const rate = c.baseRate * (1.0 + val * c.volatility);
   return Math.max(0.2, parseFloat(rate.toFixed(1)));
 }
 
 export function getStockPrice(key, day = getCurrentCycleDay()) {
   const s = STOCKS[key];
   const seed = world.getDynamicProperty(`stock_seed_${key}`) ?? 1;
-  const sinVal = Math.sin(day * 1.2 + seed);
-  const price = s.base * (1.0 + sinVal * s.vol);
+  const val = patternValue(seed, day);
+  const price = s.base * (1.0 + val * s.vol);
   return Math.max(2, Math.round(price));
+}
+
+// 花の先物の理論価格。株式と同じ週間パターンテーブルに乗せることで、
+// 「相場と無関係な決済ランダム値」だったこれまでの先物と違い、他の相場と整合する値動きになる。
+export function getFuturesPrice(key, day = getCurrentCycleDay()) {
+  const f = FUTURES[key];
+  const seed = world.getDynamicProperty(`futures_seed_${key}`) ?? 1;
+  const val = patternValue(seed, day);
+  const price = f.base * (1.0 + val * f.vol);
+  return Math.max(1, Math.round(price));
+}
+
+export function getWeekFuturesPrices(key) {
+  const prices = [];
+  for (let d = 1; d <= 7; d++) prices.push(getFuturesPrice(key, d));
+  return prices;
 }
 
 export function getCommodityPrice(key, day = getCurrentCycleDay()) {
   const c = COMMODITIES[key];
   const seed = world.getDynamicProperty(`commodity_seed_${key}`) ?? 1;
-  const sinVal = Math.sin(day * 1.05 + seed);
-  const price = c.baseRate * (1.0 + sinVal * c.volatility);
+  const val = patternValue(seed, day);
+  const price = c.baseRate * (1.0 + val * c.volatility);
   return Math.max(0.5, parseFloat(price.toFixed(1)));
 }
 
@@ -66,7 +99,7 @@ export function buildSparkline(weekValues) {
   for (let i = 0; i < weekValues.length; i++) {
     const v = weekValues[i];
     const level = span <= 0 ? Math.floor((SPARK_BLOCKS.length - 1) / 2) : Math.round(((v - min) / span) * (SPARK_BLOCKS.length - 1));
-    const color = i === 0 ? "§7" : v > weekValues[i - 1] ? "§a" : v < weekValues[i - 1] ? "§c" : "§7";
+    const color = i === 0 ? "§0" : v > weekValues[i - 1] ? "§a" : v < weekValues[i - 1] ? "§c" : "§0";
     out += `${color}${SPARK_BLOCKS[level]}`;
   }
   return out + "§r";
@@ -160,6 +193,16 @@ export function startWeeklyMarketCycle() {
   const day = getCurrentCycleDay();
   const lastDay = world.getDynamicProperty("last_checked_day") ?? 0;
   if (day === 1 && lastDay === 7) {
+    // 相場パターンテーブルをシャッフル（前週と同じテーブルは避ける）
+    const prevPattern = getMarketPatternIndex();
+    let nextPattern = Math.floor(Math.random() * MARKET_PATTERNS.length);
+    if (MARKET_PATTERNS.length > 1) {
+      while (nextPattern === prevPattern) {
+        nextPattern = Math.floor(Math.random() * MARKET_PATTERNS.length);
+      }
+    }
+    world.setDynamicProperty("market_pattern_index", nextPattern);
+
     for (const k of Object.keys(CURRENCIES)) {
       world.setDynamicProperty(`curr_seed_${k}`, Math.random() * 10);
     }
@@ -169,7 +212,15 @@ export function startWeeklyMarketCycle() {
     for (const k of Object.keys(COMMODITIES)) {
       world.setDynamicProperty(`commodity_seed_${k}`, Math.random() * 10);
     }
+    for (const k of Object.keys(FUTURES)) {
+      world.setDynamicProperty(`futures_seed_${k}`, Math.random() * 10);
+    }
     applyBankInterest();
+    // ローン返済・カードのリボ払い・保険料の週次引き落としも経済リセットに合わせて処理する
+    applyLoanBilling();
+    applyCardBilling();
+    applyMailOrderPrimeBilling();
+    applyInsuranceBilling();
     broadcastWeeklyNews();
   }
   world.setDynamicProperty("last_checked_day", day);
