@@ -5,63 +5,21 @@ import { STR } from "../i18n/strings.js";
 import { COMMODITIES, COMMODITY_ICONS } from "../data/market-data.js";
 import { itemLocKey } from "../data/mob-trade-data.js";
 import { getCommodityPrice, getCurrentCycleDay, getWeekCommodityPrices, buildIconWaveChart } from "../economy/market-engine.js";
-import { getAccount } from "../economy/bank.js";
+import { getAccount, getItemCountWithBlocks, removeItemWithBlocks } from "../economy/bank.js";
 
 // ==========================================
 // ゴーレムの宝石取引（現物資産）UI / Golem Commodity Menu
 // ==========================================
 
-// インベントリ内の指定アイテムの合計所持数を数える
-function countItemInInventory(player, itemId) {
-  const inv = player.getComponent("inventory")?.container;
-  if (!inv) return 0;
-  let total = 0;
-  for (let i = 0; i < inv.size; i++) {
-    const stack = inv.getItem(i);
-    if (stack && stack.typeId === itemId) total += stack.amount;
-  }
-  return total;
-}
-
-// 64個を超える分はスタックを分けて追加する
-function addItemsChunked(inv, itemId, qty) {
+// ベルボート方式：インベントリへ直接付与せず、足元にドロップする
+// （64個を超える分はスタックを分けて複数回ドロップ）
+function dropItemsToPlayer(player, itemId, qty) {
   let remaining = qty;
   while (remaining > 0) {
     const chunk = Math.min(remaining, 64);
-    inv.addItem(new ItemStack(itemId, chunk));
+    player.dimension.spawnItem(new ItemStack(itemId, chunk), player.location);
     remaining -= chunk;
   }
-}
-
-// インベントリから指定アイテムをqty個取り除く（複数スタックにまたがってもOK）。
-// 保有数が足りない場合は何も取り除かず false を返す。
-function removeItemsFromInventory(inv, itemId, qty) {
-  if (countInContainer(inv, itemId) < qty) return false;
-
-  let remaining = qty;
-  for (let i = 0; i < inv.size && remaining > 0; i++) {
-    const stack = inv.getItem(i);
-    if (!stack || stack.typeId !== itemId) continue;
-
-    if (stack.amount > remaining) {
-      stack.amount -= remaining;
-      inv.setItem(i, stack);
-      remaining = 0;
-    } else {
-      remaining -= stack.amount;
-      inv.setItem(i, undefined);
-    }
-  }
-  return true;
-}
-
-function countInContainer(inv, itemId) {
-  let total = 0;
-  for (let i = 0; i < inv.size; i++) {
-    const stack = inv.getItem(i);
-    if (stack && stack.typeId === itemId) total += stack.amount;
-  }
-  return total;
 }
 
 // ゴーレムのトップ画面：3つの現物資産から選ぶ
@@ -99,7 +57,7 @@ export function openGolemTradeDialog(player, key) {
   const c = COMMODITIES[key];
   const price = getCommodityPrice(key);
   const acc = getAccount(player);
-  const held = countItemInInventory(player, c.itemId);
+  const held = getItemCountWithBlocks(player, c.itemId, c.blockId);
   const currentDay = getCurrentCycleDay();
   const chart = buildIconWaveChart(COMMODITY_ICONS[key], getWeekCommodityPrices(key), currentDay);
 
@@ -161,10 +119,7 @@ export function executeGolemBuy(player, key, qty) {
     return openGolemTradeDialog(player, key);
   }
 
-  const inv = player.getComponent("inventory")?.container;
-  if (!inv) return openGolemTradeDialog(player, key);
-
-  addItemsChunked(inv, c.itemId, qty);
+  dropItemsToPlayer(player, c.itemId, qty);
   player.setDynamicProperty("acc_emeralds", acc.emeralds - cost);
 
   player.sendMessage({
@@ -186,10 +141,7 @@ export function executeGolemSell(player, key, qty) {
     return openGolemTradeDialog(player, key);
   }
 
-  const inv = player.getComponent("inventory")?.container;
-  if (!inv) return openGolemTradeDialog(player, key);
-
-  if (!removeItemsFromInventory(inv, c.itemId, qty)) {
+  if (!removeItemWithBlocks(player, c.itemId, c.blockId, qty)) {
     player.sendMessage(t(lang, STR.golemInsufficientItems));
     return openGolemTradeDialog(player, key);
   }

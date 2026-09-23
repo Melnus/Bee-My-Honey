@@ -117,10 +117,8 @@ export function confirmMobBuy(player, currKey, item) {
     return openMobBuyList(player, currKey);
   }
 
-  const inv = player.getComponent("inventory")?.container;
-  if (!inv) return openMobBuyList(player, currKey);
-
-  inv.addItem(new ItemStack(item.id, 1));
+  // ベルボート方式：インベントリへ直接付与せず、足元にドロップする
+  player.dimension.spawnItem(new ItemStack(item.id, 1), player.location);
   player.setDynamicProperty(`acc_curr_${currKey}`, acc[currKey] - item.value);
   player.sendMessage({
     rawtext: [
