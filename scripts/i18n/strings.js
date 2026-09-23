@@ -11,7 +11,7 @@ export const STR = {
   },
   btnBank: { ja: "口座管理\n(預入・引出)", en: "Bank\n(Deposit & Withdraw)" },
   btnForex: { ja: "外貨為替\n(5種の通貨)", en: "Forex Market\n(5 Currencies)" },
-  btnStock: { ja: "株式市場\n(5銘柄)", en: "Stock Market\n(5 Tickers)" },
+  btnStock: { ja: "株式市場\n(7銘柄)", en: "Stock Market\n(7 Tickers)" },
   btnFutures: { ja: "花の先物\n(レバレッジ取引)", en: "Flower Futures\n(Leverage Trade)" },
   btnWallet: { ja: "コールドウォレット\n(物語コード発行/読込)", en: "Cold Wallet\n(Story Code Export/Import)" },
   btnLang: {
@@ -28,9 +28,20 @@ export const STR = {
     ja: (bal, inv, rate) => `電子残高: ${bal} E\n所持現物: ${inv} エメラルド\n週利 ${rate}%（元本保証・低リターン）`,
     en: (bal, inv, rate) => `Bank Balance: ${bal} E\nIn Inventory: ${inv} Emeralds\nWeekly Interest: ${rate}% (Guaranteed, Low Return)`
   },
-  bankDeposit10: { ja: "10 E 預け入れる", en: "Deposit 10" },
-  bankDepositAll: { ja: "全て預け入れる", en: "Deposit All" },
-  bankWithdraw10: { ja: "10 E 引き出す", en: "Withdraw 10" },
+  bankDepositBtn: { ja: "預け入れる", en: "Deposit" },
+  bankDepositModalTitle: { ja: "エメラルドを預け入れる", en: "Deposit Emeralds" },
+  bankDepositStepBody: {
+    ja: (qty, inv) => `口座へ預け入れる\n\n数量: ${qty} E\n所持数: ${inv} E`,
+    en: (qty, inv) => `Deposit to Balance\n\nQty: ${qty} E\nIn Inventory: ${inv} E`
+  },
+  bankConfirmDeposit: { ja: "この数量で預け入れる", en: "Confirm Deposit" },
+  bankWithdrawBtn: { ja: "引き出す", en: "Withdraw" },
+  bankWithdrawModalTitle: { ja: "エメラルドを引き出す", en: "Withdraw Emeralds" },
+  bankWithdrawStepBody: {
+    ja: (qty, bal) => `口座から引き出す\n\n数量: ${qty} E\n口座残高: ${bal} E`,
+    en: (qty, bal) => `Withdraw from Balance\n\nQty: ${qty} E\nBalance: ${bal} E`
+  },
+  bankConfirmWithdraw: { ja: "この数量で引き出す", en: "Confirm Withdrawal" },
   back: { ja: "« 戻る", en: "« Back" },
   bankDepositMsg: { ja: (n) => `§a[Bank] ${n}エメラルドを入金しました。`, en: (n) => `§a[Bank] Deposited ${n} Emeralds.` },
   bankWithdrawMsg: { ja: (n) => `§a[Bank] ${n}エメラルドを引き出しました。`, en: (n) => `§a[Bank] Withdrew ${n} Emeralds.` },
@@ -94,6 +105,7 @@ export const STR = {
   divNotEligible: { ja: (th, val) => `§c配当には評価額 ${th}E 以上の保有が必要です (現在: ${val}E)`, en: (th, val) => `§cRequires at least ${th}E in stock value (Current: ${val}E)` },
   divAlreadyClaimed: { ja: "§e本日の配当は受け取り済みです。", en: "§eYou already claimed today's dividend." },
   divClaimMsg: { ja: (name) => `§a[配当] ${name} の配当物資を受け取りました！`, en: (name) => `§a[Dividend] Claimed dividend rewards from ${name}!` },
+  divClaimCashMsg: { ja: (name, n) => `§a[配当] ${name} から配当金 ${n}E を受け取りました！`, en: (name, n) => `§a[Dividend] Received a ${n}E cash dividend from ${name}!` },
 
   futuresTitle: { ja: "花の先物契約", en: "Flower Futures" },
   futuresBody: {
@@ -217,5 +229,45 @@ export const STR = {
   golemSellSuccess: { ja: (n, item, gain) => `§b${item}を${n}個売却した(+${gain} E)`, en: (n, item, gain) => `§bSold ${n}x ${item} (+${gain} E)` },
   golemNothingToTrade: { ja: "§c取引できる数がありません。", en: "§cNothing to trade." },
   golemInsufficientFunds: { ja: "§cエメラルドが足りません。", en: "§cNot enough Emeralds." },
-  golemInsufficientItems: { ja: "§c保有数が足りません。", en: "§cYou don't hold enough." }
+  golemInsufficientItems: { ja: "§c保有数が足りません。", en: "§cYou don't hold enough." },
+
+  // --- 郵便販売カタログ(カテゴリ制) / Mail Order Catalog (categorized) ---
+  mailBrowseCategoriesBtn: { ja: "カタログを見る（カテゴリ別）", en: "Browse Catalog (by Category)" },
+  mailBargainBtn: { ja: " 本日のお買い得コーナー（レア5点・20%引）", en: " Today's Bargain Corner (5 Rare Items, 20% Off)" },
+  mailPrimeBtn: {
+    ja: (active) => active ? " プライムスタンダード管理（加入中）" : " プライムスタンダードに加入（送料無料）",
+    en: (active) => active ? " Manage Prime Standard (Active)" : " Join Prime Standard (Free Shipping)"
+  },
+  mailCategoryListTitle: { ja: "カタログ・カテゴリ", en: "Catalog Categories" },
+  mailCategoryListBody: { ja: (bal) => `所持: ${bal}E\nカテゴリを選んでください。`, en: (bal) => `Balance: ${bal}E\nChoose a category.` },
+  mailShippingLabel: { ja: (fee) => (fee > 0 ? `\n送料: ${fee}E` : `\n送料: §a無料(プライム)§r`), en: (fee) => (fee > 0 ? `\nShipping: ${fee}E` : `\nShipping: §aFree (Prime)§r`) },
+  mailCatalogBody: { ja: (bal, fee) => `所持: ${bal}E${fee > 0 ? `\n注文ごとに送料${fee}Eがかかります。` : `\n§aプライムスタンダード加入中: 送料無料§r`}`, en: (bal, fee) => `Balance: ${bal}E${fee > 0 ? `\nEach order has a ${fee}E shipping fee.` : `\n§aPrime Standard active: free shipping§r`}` },
+  mailBargainTitle: { ja: "本日のお買い得コーナー", en: "Today's Bargain Corner" },
+  mailBargainBody: {
+    ja: (bal) => `所持: ${bal}E\n地平線の彼方からの特選レア品。20%引き・毎日入れ替わります。`,
+    en: (bal) => `Balance: ${bal}E\nSpecially selected rare goods, 20% off. Rotates daily.`
+  },
+  mailBargainButtonLine: { ja: (price, orig) => `${price}E §0(通常 ${orig}E)§r`, en: (price, orig) => `${price}E §0(Regular ${orig}E)§r` },
+  mailPurchaseMsg: { ja: (name, cash, card, ship) => `§a${name}を購入しました。(現金${cash}E + カード${card}E${ship > 0 ? ` / 送料${ship}E込み` : " / 送料無料"})`, en: (name, cash, card, ship) => `§aPurchased ${name}. (Cash ${cash}E + Card ${card}E${ship > 0 ? `, incl. ${ship}E shipping` : ", free shipping"})` },
+
+  mailPrimeTitle: { ja: "プライム会員管理", en: "Prime Membership" },
+  mailPrimeBody: {
+    ja: (fee, sknValue, threshold, premiumActive, premiumEligible) =>
+      `【プライムスタンダード】(郵便販売)\n週額${fee}E自動引き落とし・送料無料。\n\n【スケインプライムプレミアム】(株式連動)\nSKN評価額 ${sknValue}E / 必要額 ${threshold}E\n加入中: ${premiumActive ? "はい" : "いいえ"}${premiumEligible ? "" : "\n§c※評価額が不足しています§r"}\n加入すると配達時にオウムが同伴し、たまに芸を披露します。`,
+    en: (fee, sknValue, threshold, premiumActive, premiumEligible) =>
+      `[Prime Standard] (Mail Order)\nAuto-billed ${fee}E/week. Free shipping.\n\n[Skein Prime Premium] (Stock-linked)\nSKN value: ${sknValue}E / Required: ${threshold}E\nActive: ${premiumActive ? "Yes" : "No"}${premiumEligible ? "" : "\n§cInsufficient stock value§r"}\nParrots escort your deliveries and may perform a trick.`
+  },
+  mailPrimeStandardSubBtn: { ja: "プライムスタンダードに加入する", en: "Subscribe to Prime Standard" },
+  mailPrimeStandardUnsubBtn: { ja: "プライムスタンダードを解約する", en: "Cancel Prime Standard" },
+  mailPrimePremiumSubBtn: { ja: "プライムプレミアムに加入する", en: "Activate Prime Premium" },
+  mailPrimePremiumUnsubBtn: { ja: "プライムプレミアムを解約する", en: "Deactivate Prime Premium" },
+  mailPrimeStandardSubMsg: { ja: "§aプライムスタンダードに加入しました。次回から送料無料です。", en: "§aSubscribed to Prime Standard. Shipping is now free." },
+  mailPrimeStandardUnsubMsg: { ja: "§eプライムスタンダードを解約しました。", en: "§eCanceled Prime Standard." },
+  mailPrimePremiumSubMsg: { ja: "§aプライムプレミアムに加入しました！配達にオウムが同伴します。", en: "§aActivated Prime Premium! Parrots will now escort your deliveries." },
+  mailPrimePremiumUnsubMsg: { ja: "§eプライムプレミアムを解約しました。", en: "§eDeactivated Prime Premium." },
+  mailPrimePremiumNotEligible: { ja: "§cSKN株の評価額が必要額に届いていません。", en: "§cYour SKN stock value doesn't meet the requirement." },
+  primeStandardBilled: { ja: (n) => `§b[Skein] プライムスタンダード会費 ${n}E を引き落としました。`, en: (n) => `§b[Skein] Billed ${n}E for Prime Standard.` },
+  primeStandardCanceled: { ja: "§e[Skein] 残高不足のためプライムスタンダードを自動解約しました。", en: "§e[Skein] Insufficient balance — Prime Standard was auto-canceled." },
+  primeParrotArrive: { ja: "§a遠くから羽ばたきの音…配達のオウムが荷物と一緒に舞い降りた！", en: "§aA flutter of wings — a delivery parrot swoops down with your package!" },
+  primeParrotTrick: { ja: "§a配達のオウムが舞い降り、ちょっとした芸を披露してくれた！", en: "§aThe delivery parrot swoops down and performs a little trick for you!" }
 };
