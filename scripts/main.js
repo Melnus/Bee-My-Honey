@@ -8,11 +8,13 @@ import { startInsuranceDeathWatch } from "./economy/insurance.js";
 
 import { hasFlowerPotAbove, summonWanderingTrader, startTraderTetherLoop } from "./trader/wandering-trader.js";
 
-import { openMainMenu } from "./ui/main-menu.js";
+import { openTradingMenu } from "./ui/trading-menu.js";
 import { openMobTradeMenu } from "./ui/mob-trade-menu.js";
 import { openGolemMenu } from "./ui/golem-menu.js";
 import { openInsuranceMenu } from "./ui/insurance-menu.js";
 import { openMailOrderMenu } from "./ui/mail-order-menu.js";
+import { openLaborMenu } from "./ui/labor-menu.js";
+import { recordLicenseWork } from "./economy/labor.js";
 
 // ==========================================
 // エントリーポイント / Bootstrap
@@ -50,6 +52,13 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
 
   if (itemStack.typeId !== "minecraft:book") return;
 
+  // 書見台 + 本 → HRMHRM Partners HLD 労働市場ポータル
+  if (block.typeId === "minecraft:lectern") {
+    event.cancel = true;
+    system.run(() => openLaborMenu(player, block.location));
+    return;
+  }
+
   // 骨ブロック + 真上に植木鉢 → 保険窓口
   if (block.typeId === "minecraft:bone_block" && hasFlowerPotAbove(block)) {
     event.cancel = true;
@@ -60,7 +69,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
   // 巣箱(プレイヤー設置)はこれまで通り、メインメニュー全体への入口として残す
   if (block.typeId === "minecraft:beehive") {
     event.cancel = true;
-    system.run(() => openMainMenu(player));
+    system.run(() => openTradingMenu(player));
     return;
   }
 
@@ -101,5 +110,42 @@ system.run(() => {
     world.getDimension("overworld").runCommand("mobevent minecraft:wandering_trader_event false");
   } catch (e) {
     console.warn("[BeeMyHoney] Failed to disable natural trader spawning: " + e);
+  }
+});
+
+// ==========================================
+// 労働市場ライセンス: 実測進捗トラッキング
+// ------------------------------------------
+// スタッフサービスの資格(ネザー/水中/エンド)は「試験に金を払って運試し」ではなく、
+// 実際にその分野の作業(対象ブロックの設置/破壊)を行った実績で進捗する。
+// ==========================================
+world.afterEvents.playerPlaceBlock.subscribe((event) => {
+  try {
+    let biomeId;
+    try {
+      biomeId = event.dimension.getBiome(event.block.location)?.id;
+    } catch (e) {
+      biomeId = undefined; // 未読み込みチャンク等は判定不能として扱う(バイオーム指定があるライセンスは進捗しない)
+    }
+    recordLicenseWork(event.player, event.block.typeId, "place", event.block.location, event.dimension.id, biomeId);
+  } catch (e) {
+    console.warn("[BeeMyHoney] License tracking (place) error: " + e);
+  }
+});
+
+world.afterEvents.playerBreakBlock.subscribe((event) => {
+  try {
+    // 破壊前のブロック情報(brokenBlockPermutation)から typeId を取る
+    const typeId = event.brokenBlockPermutation?.type?.id;
+    if (!typeId) return;
+    let biomeId;
+    try {
+      biomeId = event.dimension.getBiome(event.block.location)?.id;
+    } catch (e) {
+      biomeId = undefined;
+    }
+    recordLicenseWork(event.player, typeId, "break", event.block.location, event.dimension.id, biomeId);
+  } catch (e) {
+    console.warn("[BeeMyHoney] License tracking (break) error: " + e);
   }
 });

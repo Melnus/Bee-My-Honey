@@ -1,23 +1,76 @@
 import { world } from "@minecraft/server";
 
 // ==========================================================
-// コールドウォレット セキュリティモジュール (v4)
-// Cold Wallet Security Module (v4)
+// コールドウォレット セキュリティモジュール (v5)
+// Cold Wallet Security Module (v5)
 // ==========================================================
+// v4までは salt がスクリプトファイル内に固定文字列としてハードコードされており、
+// .mcaddon を解凍すれば誰でも読めてしまうため、正規のExportを経由せず
+// 任意の publicKey/nonce/amount に対する「正しい」署名を誰でも計算できてしまう
+// (=Import経由での残高偽造)という重大な欠陥があった。
+//
+// v5では固定saltを廃止し、代わりに「そのワールドだけが知っているランダムな
+// シークレット」を初回起動時に生成してワールドのセーブデータ(dynamic property)
+// に保存する方式に変更する。この値はスクリプトファイルには一切含まれないため、
+// .mcaddonをダウンロード・解析しただけの一般プレイヤーは正しい署名を計算できず、
+// 偽造にはそのワールドのセーブデータ自体へのアクセス(=実質的な管理者権限)が必要になる。
+//
+// 別ワールドへの持ち出しは、デフォルトでは不可(ワールド固有シークレットは
+// 他ワールドには分からないため)。運営者間で意図的に連携したい場合のみ、
+// 管理者メニューから「ネットワーク共有シークレット」を手動設定することで
+// 持ち出しを有効化できる(setNetworkSecret 参照)。
 
-const WALLET_SALT_VERSION = 1;
-const WALLET_SALTS = {
-  1: "If you cheat, this just stops being fun"
-};
+const WALLET_SECRET_KEY = "wallet_secret";
+const WALLET_NETWORK_SECRET_KEY = "wallet_network_secret"; // 管理者が設定。未設定なら持ち出し機能は無効
 
-function saltForVersion(version) {
-  const salt = WALLET_SALTS[version];
-  if (salt === undefined) throw new RangeError(`Unknown WALLET_SALT version: ${version}`);
-  return salt;
+const SECRET_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+function generateRandomSecret(length = 16) {
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += SECRET_CHARS[Math.floor(Math.random() * SECRET_CHARS.length)];
+  }
+  return out;
 }
 
-function knownSaltVersionsNewestFirst() {
-  return Object.keys(WALLET_SALTS).map(Number).sort((a, b) => b - a);
+// ワールド固有のシークレットを取得する。存在しなければその場で生成して保存する。
+export function getWorldSecret() {
+  let secret = world.getDynamicProperty(WALLET_SECRET_KEY);
+  if (typeof secret !== "string" || secret.length === 0) {
+    secret = generateRandomSecret(16);
+    world.setDynamicProperty(WALLET_SECRET_KEY, secret);
+  }
+  return secret;
+}
+
+// 管理者が設定した、別ワールドとの持ち出し用の共有シークレット。未設定ならundefined。
+export function getNetworkSecret() {
+  const secret = world.getDynamicProperty(WALLET_NETWORK_SECRET_KEY);
+  return typeof secret === "string" && secret.length > 0 ? secret : undefined;
+}
+
+// 管理者メニューから呼び出す想定。呼び出し側でオペレーター権限チェックを行うこと。
+export function setNetworkSecret(secret) {
+  world.setDynamicProperty(WALLET_NETWORK_SECRET_KEY, String(secret));
+}
+
+export function clearNetworkSecret() {
+  world.setDynamicProperty(WALLET_NETWORK_SECRET_KEY, undefined);
+}
+
+// 新規コードの署名に使うシークレット。ネットワーク共有シークレットが設定されていれば
+// それを優先する(=他ワールドでも復号できるようにする)。未設定ならワールド固有シークレット。
+function activeSigningSecret() {
+  return getNetworkSecret() ?? getWorldSecret();
+}
+
+// 検証時に試すシークレットの候補。ワールド固有シークレットは常に試し、
+// ネットワーク共有シークレットが設定されていればそれも試す
+// (設定変更の前後で発行されたコードの両方を検証できるようにするため)。
+function candidateSecrets() {
+  const secrets = [getWorldSecret()];
+  const network = getNetworkSecret();
+  if (network !== undefined) secrets.push(network);
+  return secrets;
 }
 
 // 桁数構成: 公開鍵(6) + Nonce(4) + 金額(6) + 署名(4) = 合計20桁
@@ -149,32 +202,29 @@ export function validateNonce(nonce) {
   return { ok: true };
 }
 
-// 鍵導出
-function deriveSecretKeyWithVersion(secretWord, version) {
-  const salt = saltForVersion(version);
-  return simpleHash(`sk:${String(secretWord).trim()}:${salt}`) % (10 ** PUBKEY_DIGITS);
+// 鍵導出（ワールド固有シークレットを使用。合言葉の検証はネットワーク共有シークレットとは無関係）
+function deriveSecretKeyWithSecret(secretWord, secret) {
+  return simpleHash(`sk:${String(secretWord).trim()}:${secret}`) % (10 ** PUBKEY_DIGITS);
 }
 
-function derivePublicKeyWithVersion(secretKeyValue, version) {
-  const salt = saltForVersion(version);
-  return simpleHash(`pk:${secretKeyValue}:${salt}`) % (10 ** PUBKEY_DIGITS);
+function derivePublicKeyWithSecret(secretKeyValue, secret) {
+  return simpleHash(`pk:${secretKeyValue}:${secret}`) % (10 ** PUBKEY_DIGITS);
 }
 
 export function deriveSecretKey(secretWord) {
-  return deriveSecretKeyWithVersion(secretWord, WALLET_SALT_VERSION);
+  return deriveSecretKeyWithSecret(secretWord, getWorldSecret());
 }
 
 export function derivePublicKey(secretKeyValue) {
-  return derivePublicKeyWithVersion(secretKeyValue, WALLET_SALT_VERSION);
+  return derivePublicKeyWithSecret(secretKeyValue, getWorldSecret());
 }
 
+// 関数名は旧バージョンとの互換のため維持しているが、実体は「ワールド固有シークレット1つ」との照合。
 export function matchesPublicKeyAnyVersion(secretWord, storedPublicKey) {
-  for (const version of knownSaltVersionsNewestFirst()) {
-    const secretKey = deriveSecretKeyWithVersion(secretWord, version);
-    const publicKey = derivePublicKeyWithVersion(secretKey, version);
-    if (publicKey === storedPublicKey) return true;
-  }
-  return false;
+  const secret = getWorldSecret();
+  const secretKey = deriveSecretKeyWithSecret(secretWord, secret);
+  const publicKey = derivePublicKeyWithSecret(secretKey, secret);
+  return publicKey === storedPublicKey;
 }
 
 export function formatPublicKey(publicKey) {
@@ -202,13 +252,8 @@ export function unregisterPublicKey(publicKey) {
 }
 
 // 署名計算
-function computeSignatureWithVersion(publicKey, nonce, amount, version) {
-  const salt = saltForVersion(version);
-  return simpleHash(`sig:${publicKey}:${nonce}:${amount}:${salt}`) % (10 ** SIGNATURE_DIGITS);
-}
-
-function computeSignature(publicKey, nonce, amount) {
-  return computeSignatureWithVersion(publicKey, nonce, amount, WALLET_SALT_VERSION);
+function computeSignatureWithSecret(publicKey, nonce, amount, secret) {
+  return simpleHash(`sig:${publicKey}:${nonce}:${amount}:${secret}`) % (10 ** SIGNATURE_DIGITS);
 }
 
 // コード発行・検証
@@ -218,7 +263,9 @@ export function buildWalletCode(publicKey, nonce, amount, theme, lang = "ja") {
   const nonceCheck = validateNonce(nonce);
   if (!nonceCheck.ok) throw new RangeError(`Invalid nonce: ${nonce}`);
 
-  const signature = computeSignature(publicKey, nonce, amount);
+  // ネットワーク共有シークレットが設定されていればそれで署名(他ワールドでも検証可能にする)。
+  // 未設定ならワールド固有シークレットで署名(=このワールド内でしか検証できない)。
+  const signature = computeSignatureWithSecret(publicKey, nonce, amount, activeSigningSecret());
   const digits = [
     ...padNum(publicKey, PUBKEY_DIGITS).split("").map(Number),
     ...padNum(nonce, NONCE_DIGITS).split("").map(Number),
@@ -239,8 +286,11 @@ export function verifyAndDecodeWalletCode(codeText) {
   const amount = parseInt(take(AMOUNT_DIGITS), 10);
   const signature = parseInt(take(SIGNATURE_DIGITS), 10);
 
-  const matches = knownSaltVersionsNewestFirst().some(
-    (version) => computeSignatureWithVersion(publicKey, nonce, amount, version) === signature
+  // ワールド固有シークレット、および(設定されていれば)ネットワーク共有シークレットの
+  // どちらかで署名が一致すればOKとする。スクリプトファイルにはどちらの値も含まれないため、
+  // このワールドのセーブデータにアクセスできない第三者は正しい署名を計算できない。
+  const matches = candidateSecrets().some(
+    (secret) => computeSignatureWithSecret(publicKey, nonce, amount, secret) === signature
   );
   if (!matches) return { ok: false, reason: "tampered" };
 
