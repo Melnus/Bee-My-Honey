@@ -86,6 +86,18 @@ export const STOCKS = {
     desc: { ja: "海の生物たちが運営する生命保険会社", en: "A life insurance company run by sea creatures" },
     dividendType: "cash",
     dividendRate: 0.05
+  },
+  hrmhrm: {
+    name: { ja: "HRMHRM Partners HLD (HRM)", en: "HRMHRM Partners HLD (HRM)" },
+    base: 80,
+    vol: 0.2,
+    desc: {
+      ja: "村人を労働者として働かせるグローバルコンサルタントサービス。設立者・CEOは不明。",
+      en: "A global consultancy that dispatches villagers as laborers. Founder and CEO unknown."
+    },
+    // 現金/アイテム配当なし。一定数以上保有していると、労働市場(クエスト/コンサル/オーナーズクラブ)で
+    // 仕事が発生するたびにストックオプション(自社株)が付与される特殊型。
+    dividendType: "stock_option"
   }
 };
 
@@ -227,7 +239,8 @@ export const STOCK_ICONS = {
   clattle: "§7●",
   eekbay: "§b●",
   skein: "§a●",
-  kelplife: "§3●"
+  kelplife: "§3●",
+  hrmhrm: "§6●"
 };
 export const COMMODITY_ICONS = {
   diamond: "§b●",
@@ -238,6 +251,6 @@ export const FUTURES_ICONS = {
   rose: "§c●",
   allium: "§5●",
   jade_orchid: "§a●",
-  sunflower: "§e●",
+  sunflower: "§6●",
   sakura: "§d●"
 };
