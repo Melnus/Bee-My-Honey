@@ -174,6 +174,9 @@ export function lendToBorrower(player, candidate) {
   player.setDynamicProperty("loan_lent_active", 1);
   player.setDynamicProperty("loan_lent_amount", candidate.amount);
   player.setDynamicProperty("loan_lent_weeks_left", candidate.weeks);
+  // 満期時の利息計算(resolveLending)で元の契約期間を参照できるよう、別途保存しておく。
+  // loan_lent_weeks_left は満期に向けてカウントダウンして0になるため、これだけでは復元できない。
+  player.setDynamicProperty("loan_lent_original_weeks", candidate.weeks);
   player.setDynamicProperty("loan_lent_rate", candidate.rate);
   player.setDynamicProperty("loan_lent_prob", Math.round(candidate.repayProbability * 100));
   player.setDynamicProperty("loan_lent_name", candidate.name);
@@ -193,7 +196,10 @@ export function tickLendingWeek(player) {
 export function resolveLending(player) {
   const amount = player.getDynamicProperty("loan_lent_amount") ?? 0;
   const rate = player.getDynamicProperty("loan_lent_rate") ?? 0;
-  const weeks = 1;
+  // バグ修正: 以前はここが weeks = 1 に固定されており、6週の短期融資でも
+  // 14週の長期融資でも満期時の利回りが同じになってしまっていた。
+  // lendToBorrower で保存した契約時点の元の週数を参照する。
+  const weeks = player.getDynamicProperty("loan_lent_original_weeks") ?? 1;
   const probPercent = player.getDynamicProperty("loan_lent_prob") ?? 50;
   const success = Math.random() * 100 < probPercent;
 
@@ -213,5 +219,6 @@ export function resolveLending(player) {
   player.setDynamicProperty("loan_lent_active", 0);
   player.setDynamicProperty("loan_lent_amount", 0);
   player.setDynamicProperty("loan_lent_weeks_left", 0);
+  player.setDynamicProperty("loan_lent_original_weeks", 0);
   return result;
 }

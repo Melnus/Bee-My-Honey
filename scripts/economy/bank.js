@@ -1,4 +1,4 @@
-import { world, ItemStack, EnchantmentTypes } from "@minecraft/server";
+import { world, system, ItemStack, EnchantmentTypes } from "@minecraft/server";
 import { CURRENCIES, STOCKS } from "../data/market-data.js";
 import { getCurrencyRate, getStockPrice } from "./market-engine.js";
 import { getLang, t } from "../i18n/lang.js";
@@ -12,6 +12,11 @@ import { STR } from "../i18n/strings.js";
 // 外貨・株式は変動率(volatility)が大きく元本割れもあり得るのに対し、
 // 銀行預金は変動なしの固定利子(元本保証)にすることで、リスク許容度に応じた住み分けを作る。
 export const BANK_INTEREST_RATE = 0.015; // 週1.5%固定（複利で毎週の経済リセット時に付与）
+
+// 1回の取引で扱える最大数量。giveItem 側のtick分割で鯖クラッシュ自体は防げるが、
+// UI側でも常識的な上限を設けておくことで、そもそも巨大な数量を選べないようにする。
+export const MAX_EMERALD_TX = 2304; // 物理エメラルド: インベントリ最大収容数(36スタック×64)
+export const MAX_E_TX = 2000000; // 電子取引残高(E)
 
 export function getAccount(player) {
   return {
@@ -119,20 +124,53 @@ export function removeItem(player, typeId, amount) {
   }
 }
 
-// インベントリ満杯時に足元へ安全ドロップする改善版
-export function giveItem(player, typeId, amount) {
+// 1回の呼び出しを完全に同期処理してよい上限(スタック単位ではなく個数)。
+// これを超える量は system.runJob を使ってtickをまたいで分割し、
+// 大量ドロップによる同一tick内でのエンティティ大量生成(鯖負荷・ウォッチドッグ超過)を防ぐ。
+const GIVE_ITEM_SYNC_LIMIT = 320; // 5スタック相当までは即時反映
+const GIVE_ITEM_CHUNK_STACKS_PER_TICK = 32; // 分割処理時、1tickあたりに処理するスタック数
+
+function giveItemStack(player, typeId, amount) {
   const container = player.getComponent("minecraft:inventory")?.container;
-  if (!container) return;
-  let left = amount;
-  while (left > 0) {
-    const s = Math.min(left, 64);
-    const item = new ItemStack(typeId, s);
-    const leftover = container.addItem(item);
-    if (leftover && leftover.amount > 0) {
-      player.dimension.spawnItem(leftover, player.location);
-    }
-    left -= s;
+  if (!container) return false;
+  const item = new ItemStack(typeId, amount);
+  const leftover = container.addItem(item);
+  if (leftover && leftover.amount > 0) {
+    player.dimension.spawnItem(leftover, player.location);
   }
+  return true;
+}
+
+function* giveItemJob(player, typeId, amount) {
+  let left = amount;
+  let processedThisTick = 0;
+  while (left > 0) {
+    if (!player.isValid) return; // プレイヤーが既にワールドを離れている場合は中断
+    const s = Math.min(left, 64);
+    if (!giveItemStack(player, typeId, s)) return; // インベントリ取得失敗時も中断
+    left -= s;
+    processedThisTick++;
+    if (processedThisTick >= GIVE_ITEM_CHUNK_STACKS_PER_TICK) {
+      processedThisTick = 0;
+      yield;
+    }
+  }
+}
+
+// インベントリ満杯時に足元へ安全ドロップする改善版。
+// 少量は即時反映、大量付与分は system.runJob でtickをまたいで分割処理する。
+export function giveItem(player, typeId, amount) {
+  if (amount <= 0) return;
+  if (amount <= GIVE_ITEM_SYNC_LIMIT) {
+    let left = amount;
+    while (left > 0) {
+      const s = Math.min(left, 64);
+      if (!giveItemStack(player, typeId, s)) return;
+      left -= s;
+    }
+    return;
+  }
+  system.runJob(giveItemJob(player, typeId, amount));
 }
 
 // エンチャント本などに実際のエンチャントを付与して渡す（無ければ無地のまま渡す＝既存挙動と互換）。

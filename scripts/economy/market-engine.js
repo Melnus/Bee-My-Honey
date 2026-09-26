@@ -8,6 +8,57 @@ import { applyCardBilling, applyMailOrderPrimeBilling } from "./mail-order.js";
 import { applyInsuranceBilling } from "./insurance.js";
 
 // ==========================================
+// 需要圧力システム / Demand Pressure
+// ------------------------------------------
+// これまで相場は週替わりの乱数パターンだけで決まり、実際の売買量(供給・需要)を
+// 一切見ていなかった。ここでは「BMHの取引所を通った売買量」だけを根拠にした
+// 需要圧力を銘柄ごとに1つの数値で持たせ、買われすぎたら高くなる・売られすぎたら
+// 安くなる、という手応えを追加する。
+// 世界に存在するアイテムの総量(NPC所持分やクエスト報酬分を含む)までは追わない。
+// ==========================================
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+const DEMAND_DECAY_FACTOR = 0.6; // 日付が変わるたびに圧力を60%に減衰させる(=40%だけ市場に残す)
+const DEMAND_IMPACT_SCALE = 0.015; // 1単位の売買あたりの基礎インパクト(ボラティリティで銘柄ごとに補正)
+const MAX_DEMAND_PRESSURE = 0.6; // 需要圧力による価格変動幅を±60%までにクランプ(暴走防止)
+
+function demandPropertyKey(category, key) {
+  return `demand_${category}_${key}`;
+}
+
+export function getDemandPressure(category, key) {
+  return world.getDynamicProperty(demandPropertyKey(category, key)) ?? 0;
+}
+
+function setDemandPressure(category, key, value) {
+  world.setDynamicProperty(demandPropertyKey(category, key), clamp(value, -MAX_DEMAND_PRESSURE, MAX_DEMAND_PRESSURE));
+}
+
+// 取引が確定した瞬間に各取引メニューから呼び出す。
+// qtyDelta: 買いは正の数量、売りは負の数量。volatility: その銘柄の既存の volatility/vol パラメータ。
+export function applyTrade(category, key, qtyDelta, volatility) {
+  if (!qtyDelta) return;
+  const impact = qtyDelta * DEMAND_IMPACT_SCALE * volatility;
+  setDemandPressure(category, key, getDemandPressure(category, key) + impact);
+}
+
+function decayAllDemand() {
+  const groups = [
+    ["currency", CURRENCIES],
+    ["stock", STOCKS],
+    ["commodity", COMMODITIES]
+  ];
+  for (const [category, table] of groups) {
+    for (const key of Object.keys(table)) {
+      const p = getDemandPressure(category, key);
+      if (p !== 0) setDemandPressure(category, key, p * DEMAND_DECAY_FACTOR);
+    }
+  }
+}
+
+// ==========================================
 // 経済変動エンジン / Economy Fluctuation Engine
 // (相場計算・週間チャート・週替わりニュース配信)
 // ==========================================
@@ -34,7 +85,8 @@ export function getCurrencyRate(key, day = getCurrentCycleDay()) {
   const c = CURRENCIES[key];
   const seed = world.getDynamicProperty(`curr_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
-  const rate = c.baseRate * (1.0 + val * c.volatility);
+  const pressure = getDemandPressure("currency", key);
+  const rate = c.baseRate * (1.0 + val * c.volatility) * (1 + pressure);
   return Math.max(0.2, parseFloat(rate.toFixed(1)));
 }
 
@@ -42,7 +94,8 @@ export function getStockPrice(key, day = getCurrentCycleDay()) {
   const s = STOCKS[key];
   const seed = world.getDynamicProperty(`stock_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
-  const price = s.base * (1.0 + val * s.vol);
+  const pressure = getDemandPressure("stock", key);
+  const price = s.base * (1.0 + val * s.vol) * (1 + pressure);
   return Math.max(2, Math.round(price));
 }
 
@@ -66,7 +119,8 @@ export function getCommodityPrice(key, day = getCurrentCycleDay()) {
   const c = COMMODITIES[key];
   const seed = world.getDynamicProperty(`commodity_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
-  const price = c.baseRate * (1.0 + val * c.volatility);
+  const pressure = getDemandPressure("commodity", key);
+  const price = c.baseRate * (1.0 + val * c.volatility) * (1 + pressure);
   return Math.max(0.5, parseFloat(price.toFixed(1)));
 }
 
@@ -192,6 +246,12 @@ export function startWeeklyMarketCycle() {
   system.runInterval(() => {
   const day = getCurrentCycleDay();
   const lastDay = world.getDynamicProperty("last_checked_day") ?? 0;
+
+  if (day !== lastDay) {
+    // 日付が変わるたびに需要圧力を少しずつ減衰させる(買われすぎ/売られすぎの反動を時間で和らげる)
+    decayAllDemand();
+  }
+
   if (day === 1 && lastDay === 7) {
     // 相場パターンテーブルをシャッフル（前週と同じテーブルは避ける）
     const prevPattern = getMarketPatternIndex();

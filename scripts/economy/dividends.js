@@ -12,6 +12,12 @@ import { STR } from "../i18n/strings.js";
 export const DIVIDEND_THRESHOLD = 100;
 
 export function getDividendEligibility(player, key) {
+  const s = STOCKS[key];
+  if (s.dividendType === "stock_option") {
+    // ストックオプション型は通常の「毎日クレーム」対象外。労働市場側(labor.js)から
+    // 個別に付与されるため、ここでは常に不可として扱う(stock-menu.js側でも専用表示に分岐済み)。
+    return { eligible: false, value: 0, alreadyClaimedToday: false, isStockOption: true };
+  }
   const price = getStockPrice(key);
   const holds = player.getDynamicProperty(`acc_stock_${key}`) ?? 0;
   const value = holds * price;
@@ -87,6 +93,7 @@ export function giveDividendReward(player, key) {
 
 export function claimDividend(player, key) {
   const lang = getLang(player);
+  if (STOCKS[key].dividendType === "stock_option") return; // stock-menu.js側で専用UIに分岐しているため通常到達しない
   const { eligible, value, alreadyClaimedToday } = getDividendEligibility(player, key);
 
   if (!eligible) {
