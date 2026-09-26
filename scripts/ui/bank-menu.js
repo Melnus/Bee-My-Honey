@@ -1,9 +1,9 @@
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
-import { BANK_INTEREST_RATE, getAccount, getItemCountWithBlocks, removeItemWithBlocks, giveItem } from "../economy/bank.js";
+import { BANK_INTEREST_RATE, MAX_EMERALD_TX, getAccount, getItemCountWithBlocks, removeItemWithBlocks, giveItem } from "../economy/bank.js";
 import { QTY_STEP_DELTAS } from "./shared.js";
-import { openMainMenu } from "./main-menu.js";
+import { openTradingMenu } from "./trading-menu.js";
 import { openLoanMenu } from "./loan-menu.js";
 
 const EMERALD_ID = "minecraft:emerald";
@@ -22,11 +22,11 @@ export function openBankingMenu(player) {
     .body(t(lang, STR.bankBody, acc.emeralds, invEmeralds, (BANK_INTEREST_RATE * 100).toFixed(1)))
     .button(t(lang, STR.bankDepositBtn))
     .button(t(lang, STR.bankWithdrawBtn))
-    .button(lang === "ja" ? "ローン窓口" : "Loan Desk")
+    .button(t(lang, STR.bankLoanDeskBtn))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 3) return openMainMenu(player);
+    if (res.canceled || res.selection === 3) return openTradingMenu(player);
     if (res.selection === 0) openBankDepositModal(player);
     else if (res.selection === 1) openBankWithdrawModal(player);
     else if (res.selection === 2) openLoanMenu(player);
@@ -82,7 +82,8 @@ export function openBankWithdrawModal(player, qty = 10) {
     return openBankingMenu(player);
   }
 
-  qty = Math.max(1, Math.min(qty, acc.emeralds));
+  const withdrawCap = Math.min(acc.emeralds, MAX_EMERALD_TX);
+  qty = Math.max(1, Math.min(qty, withdrawCap));
 
   const form = new ActionFormData()
     .title(t(lang, STR.bankWithdrawModalTitle))
@@ -95,7 +96,8 @@ export function openBankWithdrawModal(player, qty = 10) {
   form.show(player).then((res) => {
     if (res.canceled || res.selection === 7) return openBankingMenu(player);
     if (res.selection <= 5) {
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], acc.emeralds));
+      const cap = Math.min(acc.emeralds, MAX_EMERALD_TX);
+      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], cap));
       return openBankWithdrawModal(player, newQty);
     }
     const accNow = getAccount(player);

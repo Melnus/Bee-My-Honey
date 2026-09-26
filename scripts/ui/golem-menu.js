@@ -1,26 +1,17 @@
-import { ItemStack } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { COMMODITIES, COMMODITY_ICONS } from "../data/market-data.js";
 import { itemLocKey } from "../data/mob-trade-data.js";
-import { getCommodityPrice, getCurrentCycleDay, getWeekCommodityPrices, buildIconWaveChart } from "../economy/market-engine.js";
-import { getAccount, getItemCountWithBlocks, removeItemWithBlocks } from "../economy/bank.js";
+import { getCommodityPrice, getCurrentCycleDay, getWeekCommodityPrices, buildIconWaveChart, applyTrade } from "../economy/market-engine.js";
+import { getAccount, getItemCountWithBlocks, removeItemWithBlocks, giveItem, MAX_EMERALD_TX } from "../economy/bank.js";
 
 // ==========================================
 // ゴーレムの宝石取引（現物資産）UI / Golem Commodity Menu
 // ==========================================
-
-// ベルボート方式：インベントリへ直接付与せず、足元にドロップする
-// （64個を超える分はスタックを分けて複数回ドロップ）
-function dropItemsToPlayer(player, itemId, qty) {
-  let remaining = qty;
-  while (remaining > 0) {
-    const chunk = Math.min(remaining, 64);
-    player.dimension.spawnItem(new ItemStack(itemId, chunk), player.location);
-    remaining -= chunk;
-  }
-}
+// アイテムの払い出しは bank.js の giveItem を使う。
+// 少量は即時、大量付与時は system.runJob でtickをまたいで分割されるため、
+// 以前この画面が独自に持っていた「同一tick内で大量ドロップして鯖に負荷をかける」問題を回避できる。
 
 // ゴーレムのトップ画面：3つの現物資産から選ぶ
 export function openGolemMenu(player) {
@@ -86,7 +77,7 @@ export function openGolemTradeDialog(player, key) {
       case 1:
         return executeGolemBuy(player, key, 5);
       case 2: {
-        const maxQty = Math.floor(acc.emeralds / price);
+        const maxQty = Math.min(Math.floor(acc.emeralds / price), MAX_EMERALD_TX);
         return executeGolemBuy(player, key, maxQty);
       }
       case 3:
@@ -119,14 +110,15 @@ export function executeGolemBuy(player, key, qty) {
     return openGolemTradeDialog(player, key);
   }
 
-  dropItemsToPlayer(player, c.itemId, qty);
+  giveItem(player, c.itemId, qty);
   player.setDynamicProperty("acc_emeralds", acc.emeralds - cost);
+  applyTrade("commodity", key, qty, c.volatility);
 
   player.sendMessage({
     rawtext: [
-      { text: lang === "ja" ? "§a" : `§aBought ${qty}x ` },
+      { text: t(lang, STR.golemBuyRawtextPrefix, qty) },
       { translate: itemLocKey(c) },
-      { text: lang === "ja" ? `を${qty}個購入した(-${cost} E)` : ` (-${cost} E)` }
+      { text: t(lang, STR.golemBuyRawtextSuffix, qty, cost) }
     ]
   });
   openGolemTradeDialog(player, key);
@@ -150,12 +142,13 @@ export function executeGolemSell(player, key, qty) {
   const gain = Math.round(price * qty);
   const acc = getAccount(player);
   player.setDynamicProperty("acc_emeralds", acc.emeralds + gain);
+  applyTrade("commodity", key, -qty, c.volatility);
 
   player.sendMessage({
     rawtext: [
-      { text: lang === "ja" ? "§b" : `§bSold ${qty}x ` },
+      { text: t(lang, STR.golemSellRawtextPrefix, qty) },
       { translate: itemLocKey(c) },
-      { text: lang === "ja" ? `を${qty}個売却した(+${gain} E)` : ` (+${gain} E)` }
+      { text: t(lang, STR.golemSellRawtextSuffix, qty, gain) }
     ]
   });
   openGolemTradeDialog(player, key);

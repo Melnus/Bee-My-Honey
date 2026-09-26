@@ -16,25 +16,21 @@ export function openInsuranceMenu(player) {
   const acc = getAccount(player);
 
   const statusLine = active
-    ? (lang === "ja"
-        ? `契約中: ${active.name.ja}\n保険料支払: ${info.insurancePaymentOk ? "正常" : "未払いあり"}`
-        : `Active: ${active.name.en}\nPremium: ${info.insurancePaymentOk ? "OK" : "Overdue"}`)
-    : (lang === "ja" ? "現在、加入中の保険はありません。" : "No active insurance.");
+    ? t(lang, STR.insuranceStatusActive, t(lang, active.name), info.insurancePaymentOk)
+    : t(lang, STR.insuranceStatusNone);
 
-  const flavor = lang === "ja"
-    ? "§oワンタッチで即お見積もり。ケルプライフ§r"
-    : "§oOne-touch instant quotes. KelpLife.§r";
+  const flavor = t(lang, STR.insuranceFlavor);
 
   const form = new ActionFormData()
-    .title(lang === "ja" ? "保険窓口" : "Insurance Desk")
-    .body(`${flavor}\n\n${statusLine}\n${lang === "ja" ? "所持" : "Balance"}: ${acc.emeralds}E`);
+    .title(t(lang, STR.insuranceTitle))
+    .body(`${flavor}\n\n${statusLine}\n${t(lang, STR.insuranceBalanceLabel)}: ${acc.emeralds}E`);
 
   const keys = Object.keys(INSURANCE_TYPES);
   keys.forEach((key) => {
     const type = INSURANCE_TYPES[key];
-    form.button(`${t(lang, type.name)}\n${lang === "ja" ? "保険料" : "Premium"} ${type.premium}E/週`);
+    form.button(`${t(lang, type.name)}\n${t(lang, STR.insurancePremiumPerWeek, type.premium)}`);
   });
-  if (active) form.button(lang === "ja" ? "解約する" : "Cancel Insurance");
+  if (active) form.button(t(lang, STR.insuranceBtnCancel));
   form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
@@ -43,7 +39,7 @@ export function openInsuranceMenu(player) {
     if (res.canceled || res.selection === backIndex) return;
     if (res.selection === cancelIndex) {
       cancelInsurance(player);
-      player.sendMessage(lang === "ja" ? "保険を解約しました。" : "Insurance cancelled.");
+      player.sendMessage(t(lang, STR.insuranceCanceledMsg));
       return openInsuranceMenu(player);
     }
     const key = keys[res.selection];
@@ -58,17 +54,15 @@ function openInsuranceDetail(player, key) {
   const form = new ActionFormData()
     .title(t(lang, type.name))
     .body(
-      lang === "ja"
-        ? `${t(lang, type.desc)}\n保険料: ${type.premium}E/週\n死亡時の支給: ${t(lang, type.payout.name)} ×${type.payout.amount}`
-        : `${t(lang, type.desc)}\nPremium: ${type.premium}E/week\nPayout: ${t(lang, type.payout.name)} x${type.payout.amount}`
+      t(lang, STR.insuranceDetailBody, t(lang, type.desc), type.premium, t(lang, type.payout.name), type.payout.amount)
     )
-    .button(lang === "ja" ? "加入する" : "Subscribe")
+    .button(t(lang, STR.insuranceBtnSubscribe))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
     if (res.canceled || res.selection === 1) return openInsuranceMenu(player);
     subscribeInsurance(player, key);
-    player.sendMessage(lang === "ja" ? `§a${t(lang, type.name)}に加入しました。` : `§aSubscribed to ${t(lang, type.name)}.`);
+    player.sendMessage(t(lang, STR.insuranceSubscribedMsg, t(lang, type.name)));
     openInsuranceMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }

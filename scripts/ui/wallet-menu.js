@@ -1,10 +1,24 @@
+import { PlayerPermissionLevel } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
-import { formatPublicKey, validateAmount, validateNonce, MAX_NONCE, buildWalletCode } from "../wallet-security.js";
+import {
+  formatPublicKey,
+  validateAmount,
+  validateNonce,
+  MAX_NONCE,
+  buildWalletCode,
+  getNetworkSecret,
+  setNetworkSecret,
+  clearNetworkSecret
+} from "../wallet-security.js";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { getAccount } from "../economy/bank.js";
 import { getWallet, createWallet, checkSecretWord, importWalletCode } from "../wallet/game-wallet.js";
-import { openMainMenu } from "./main-menu.js";
+import { openTradingMenu } from "./trading-menu.js";
+
+function isOperator(player) {
+  return player.playerPermissionLevel === PlayerPermissionLevel.Operator;
+}
 
 // ==========================================
 // コールドウォレット メニュー UI
@@ -18,7 +32,7 @@ export function showCopyableCodeModal(player, codeText) {
     .button(t(lang, STR.back));
 
   form.show(player).then(() => {
-    openMainMenu(player);
+    openTradingMenu(player);
   }).catch((e) => {
     console.warn("[BeeMyHoney] Copy modal error: " + e);
   });
@@ -71,17 +85,22 @@ export function openWalletMenu(player) {
 
   const lang = getLang(player);
   const acc = getAccount(player);
+  const admin = isOperator(player);
   const form = new ActionFormData()
     .title(t(lang, STR.walletTitle))
     .body(t(lang, STR.walletBody, formatPublicKey(wallet.publicKey), wallet.nonce, acc.honeycomb))
     .button(t(lang, STR.walletExportBtn))
     .button(t(lang, STR.walletImportBtn))
     .button(t(lang, STR.walletViewLastBtn))
-    .button(t(lang, STR.walletResetBtn))
-    .button(t(lang, STR.back));
+    .button(t(lang, STR.walletResetBtn));
+  if (admin) {
+    form.button(t(lang, STR.walletAdminBtn));
+  }
+  form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 4) return openMainMenu(player);
+    const backIndex = admin ? 5 : 4;
+    if (res.canceled || res.selection === backIndex) return openTradingMenu(player);
     if (res.selection === 0) openWalletExportTheme(player);
     else if (res.selection === 1) openWalletImportForm(player);
     else if (res.selection === 2) {
@@ -93,7 +112,59 @@ export function openWalletMenu(player) {
       showCopyableCodeModal(player, lastCode);
     } else if (res.selection === 3) {
       openWalletSetupForm(player, { isReset: true });
+    } else if (admin && res.selection === 4) {
+      openNetworkSecretAdminMenu(player);
     }
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+// ==========================================
+// 【管理者専用】別ワールドへの持ち出し用ネットワーク共有シークレット設定
+// ==========================================
+export function openNetworkSecretAdminMenu(player) {
+  if (!isOperator(player)) return openWalletMenu(player); // 念のための二重チェック
+
+  const lang = getLang(player);
+  const current = getNetworkSecret();
+  const statusText = t(lang, current ? STR.walletAdminStatusSet : STR.walletAdminStatusUnset);
+
+  const form = new ActionFormData()
+    .title(t(lang, STR.walletAdminTitle))
+    .body(t(lang, STR.walletAdminBody, statusText))
+    .button(t(lang, STR.walletAdminSetBtn))
+    .button(t(lang, STR.walletAdminClearBtn))
+    .button(t(lang, STR.back));
+
+  form.show(player).then((res) => {
+    if (!isOperator(player)) return openWalletMenu(player);
+    if (res.canceled || res.selection === 2) return openWalletMenu(player);
+    if (res.selection === 1) {
+      clearNetworkSecret();
+      player.sendMessage(t(lang, STR.walletAdminClearedMsg));
+      return openWalletMenu(player);
+    }
+    openNetworkSecretInputForm(player);
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+function openNetworkSecretInputForm(player) {
+  if (!isOperator(player)) return openWalletMenu(player);
+  const lang = getLang(player);
+  const form = new ModalFormData()
+    .title(t(lang, STR.walletAdminInputTitle))
+    .textField(t(lang, STR.walletAdminInputField), "");
+
+  form.show(player).then((res) => {
+    if (!isOperator(player)) return openWalletMenu(player);
+    if (res.canceled) return openNetworkSecretAdminMenu(player);
+    const [value] = res.formValues;
+    if (!value || !value.trim()) {
+      player.sendMessage(t(lang, STR.walletAdminEmptyError));
+      return openNetworkSecretAdminMenu(player);
+    }
+    setNetworkSecret(value.trim());
+    player.sendMessage(t(lang, STR.walletAdminSetMsg));
+    openWalletMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
@@ -105,7 +176,7 @@ export function openWalletSetupForm(player, { isReset }) {
     .textField(t(lang, STR.walletSetupConfirmLabel), "");
 
   form.show(player).then((res) => {
-    if (res.canceled) return isReset ? openWalletMenu(player) : openMainMenu(player);
+    if (res.canceled) return isReset ? openWalletMenu(player) : openTradingMenu(player);
 
     const [word, confirmWord] = res.formValues;
     if (!word || !word.trim()) {
@@ -197,6 +268,6 @@ export function openWalletImportForm(player) {
     }
 
     player.sendMessage(t(lang, STR.walletImportSuccess, result.credited));
-    openMainMenu(player);
+    openTradingMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }

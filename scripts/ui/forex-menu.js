@@ -2,10 +2,10 @@ import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { CURRENCIES, CURRENCY_ICONS } from "../data/market-data.js";
-import { getCurrencyRate, getCurrentCycleDay, getWeekCurrencyRates, buildSparkline, buildIconWaveChart } from "../economy/market-engine.js";
+import { getCurrencyRate, getCurrentCycleDay, getWeekCurrencyRates, buildSparkline, buildIconWaveChart, applyTrade } from "../economy/market-engine.js";
 import { getAccount } from "../economy/bank.js";
 import { QTY_STEP_DELTAS } from "./shared.js";
-import { openMainMenu } from "./main-menu.js";
+import { openTradingMenu } from "./trading-menu.js";
 
 // ==========================================
 // 外貨為替市場メニュー UI / Forex Menu
@@ -33,7 +33,7 @@ export function openForexMenu(player) {
   form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection >= Object.keys(CURRENCIES).length) return openMainMenu(player);
+    if (res.canceled || res.selection >= Object.keys(CURRENCIES).length) return openTradingMenu(player);
     openForexTradeDialog(player, Object.keys(CURRENCIES)[res.selection]);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
@@ -105,6 +105,7 @@ export function openForexBuyModal(player, currKey, qty = 1) {
       player.setDynamicProperty("acc_emeralds", accNow.emeralds - finalCost);
       player.setDynamicProperty(`acc_curr_${currKey}`, holdNow + qty);
       player.setDynamicProperty(`acc_rate_${currKey}`, parseFloat(newAvgRate.toFixed(2)));
+      applyTrade("currency", currKey, qty, c.volatility);
       player.sendMessage(t(lang, STR.forexBuyMsg, t(lang, c.name), qty, finalCost));
     } else {
       player.sendMessage(t(lang, STR.bankAccShortage));
@@ -151,6 +152,7 @@ export function openForexSellModal(player, currKey, qty = 1) {
       const pnl = Math.round((rate - buyRate) * qty);
       player.setDynamicProperty("acc_emeralds", accNow.emeralds + finalGain);
       player.setDynamicProperty(`acc_curr_${currKey}`, holdNow - qty);
+      applyTrade("currency", currKey, -qty, c.volatility);
       player.sendMessage(t(lang, STR.forexSellMsg, t(lang, c.name), qty, pnl));
     } else {
       player.sendMessage(t(lang, STR.forexSellShortage));

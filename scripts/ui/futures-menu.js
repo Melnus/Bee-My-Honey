@@ -6,7 +6,7 @@ import { FUTURES, FUTURES_ICONS } from "../data/market-data.js";
 import { getFuturesPrice, getWeekFuturesPrices, getCurrentCycleDay, buildSparkline, buildIconWaveChart } from "../economy/market-engine.js";
 import { getAccount } from "../economy/bank.js";
 import { QTY_STEP_DELTAS } from "./shared.js";
-import { openMainMenu } from "./main-menu.js";
+import { openTradingMenu } from "./trading-menu.js";
 
 // ==========================================
 // 花の先物契約メニュー UI / Flower Futures Menu
@@ -20,9 +20,7 @@ export function openFuturesMenu(player) {
   const lang = getLang(player);
   const acc = getAccount(player);
 
-  const introText = lang === "ja"
-    ? `【花の先物契約】\n銘柄ごとに証拠金${MARGIN_PER_CONTRACT}Eで${CONTRACT_DAYS}日後の相場を予測。銘柄あたり1建玉まで。\n所持: ${acc.emeralds}E\n§c※決済で口座がマイナスになると債務不履行扱い！§r`
-    : `[Flower Futures]\nMargin ${MARGIN_PER_CONTRACT}E per contract, ${CONTRACT_DAYS}-day maturity. One position per instrument.\nBalance: ${acc.emeralds}E\n§c*A negative balance on settlement triggers default!§r`;
+  const introText = t(lang, STR.futuresIntroBody, MARGIN_PER_CONTRACT, CONTRACT_DAYS, acc.emeralds);
 
   const form = new ActionFormData()
     .title(t(lang, STR.futuresTitle))
@@ -33,15 +31,15 @@ export function openFuturesMenu(player) {
     const qty = player.getDynamicProperty(`fut_qty_${key}`) ?? 0;
     const spark = buildSparkline(getWeekFuturesPrices(key));
     const posLabel = qty > 0
-      ? (lang === "ja" ? `建玉 ${qty}枚` : `Position: ${qty}`)
-      : (lang === "ja" ? "建玉なし" : "No position");
+      ? t(lang, STR.futuresPosLabelHeld, qty)
+      : t(lang, STR.futuresPosLabelNone);
     form.button(`${t(lang, f.name)}\n${price}E/枚  ${posLabel}\n${spark}`);
   }
   form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
     const keys = Object.keys(FUTURES);
-    if (res.canceled || res.selection >= keys.length) return openMainMenu(player);
+    if (res.canceled || res.selection >= keys.length) return openTradingMenu(player);
     openFuturesDetail(player, keys[res.selection]);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
@@ -62,25 +60,24 @@ export function openFuturesDetail(player, key) {
 
   let statusLine;
   if (!hasContract) {
-    statusLine = lang === "ja" ? "現在、建玉はありません。" : "No open position.";
+    statusLine = t(lang, STR.futuresNoPositionLine);
   } else {
     const dueDisplayDay = (dueAbsDay % 7) + 1;
-    statusLine = lang === "ja"
-      ? `建玉 ${qty}枚 / 建値 ${strike}E / 満期 ${dueDisplayDay}日目${matured ? "（決済可）" : "（未到来）"}`
-      : `${qty} contracts @ ${strike}E, due day ${dueDisplayDay}${matured ? " (ready)" : ""}`;
+    const readyNote = matured ? t(lang, STR.futuresReadyNote) : t(lang, STR.futuresNotReadyNote);
+    statusLine = t(lang, STR.futuresPositionLine, qty, strike, dueDisplayDay, readyNote);
   }
 
   const form = new ActionFormData()
     .title(t(lang, f.name))
-    .body(`${t(lang, f.desc)}\n${lang === "ja" ? "現在値" : "Current"}: ${price}E\n${statusLine}\n\n${waveChart}`)
-    .button(hasContract ? (lang === "ja" ? "決済する" : "Settle") : (lang === "ja" ? "契約する" : "Open Contract"))
+    .body(`${t(lang, f.desc)}\n${t(lang, STR.futuresCurrentPriceLabel)}: ${price}E\n${statusLine}\n\n${waveChart}`)
+    .button(hasContract ? t(lang, STR.futuresBtnSettle) : t(lang, STR.futuresBtnOpenContract))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
     if (res.canceled || res.selection === 1) return openFuturesMenu(player);
     if (!hasContract) return openFuturesBuyModal(player, key);
     if (!matured) {
-      player.sendMessage(lang === "ja" ? "まだ満期日ではありません。" : "Contract has not matured yet.");
+      player.sendMessage(t(lang, STR.futuresNotMaturedMsg));
       return openFuturesDetail(player, key);
     }
     settleFutures(player, key);
@@ -96,14 +93,10 @@ export function openFuturesBuyModal(player, key, qty = 1) {
 
   const form = new ActionFormData()
     .title(t(lang, f.name))
-    .body(
-      lang === "ja"
-        ? `契約数量: ${qty}枚\n必要証拠金: ${qty * MARGIN_PER_CONTRACT}E (所持 ${acc.emeralds}E)\n満期まで${CONTRACT_DAYS}日、決済倍率×${SETTLE_MULTIPLIER}`
-        : `Quantity: ${qty}\nMargin required: ${qty * MARGIN_PER_CONTRACT}E (have ${acc.emeralds}E)\nMatures in ${CONTRACT_DAYS} days, x${SETTLE_MULTIPLIER} on settlement`
-    )
+    .body(t(lang, STR.futuresBuyModalBody, qty, qty * MARGIN_PER_CONTRACT, acc.emeralds, CONTRACT_DAYS, SETTLE_MULTIPLIER))
     .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
     .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
-    .button(lang === "ja" ? "契約を確定" : "Confirm")
+    .button(t(lang, STR.futuresBtnConfirm))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {

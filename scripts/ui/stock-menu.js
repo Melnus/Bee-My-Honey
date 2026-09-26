@@ -2,11 +2,12 @@ import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { STOCKS, STOCK_ICONS } from "../data/market-data.js";
-import { getStockPrice, getCurrentCycleDay, getWeekStockPrices, buildSparkline, buildIconWaveChart } from "../economy/market-engine.js";
+import { getStockPrice, getCurrentCycleDay, getWeekStockPrices, buildSparkline, buildIconWaveChart, applyTrade } from "../economy/market-engine.js";
 import { getAccount } from "../economy/bank.js";
 import { DIVIDEND_THRESHOLD, getDividendEligibility, claimDividend } from "../economy/dividends.js";
+import { HRMHRM_STOCK_OPTION_THRESHOLD } from "../economy/labor.js";
 import { QTY_STEP_DELTAS } from "./shared.js";
-import { openMainMenu } from "./main-menu.js";
+import { openTradingMenu } from "./trading-menu.js";
 
 // ==========================================
 // 株式市場メニュー UI / Stock Market Menu
@@ -33,7 +34,7 @@ export function openStockMarketMenu(player) {
   form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection >= Object.keys(STOCKS).length) return openMainMenu(player);
+    if (res.canceled || res.selection >= Object.keys(STOCKS).length) return openTradingMenu(player);
     openStockTradeDialog(player, Object.keys(STOCKS)[res.selection]);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
@@ -49,7 +50,10 @@ export function openStockTradeDialog(player, stockKey) {
   const waveChart = buildIconWaveChart(STOCK_ICONS[stockKey], getWeekStockPrices(stockKey), day);
 
   const divInfo = getDividendEligibility(player, stockKey);
-  let divLabel = !divInfo.eligible
+  const isStockOption = s.dividendType === "stock_option";
+  let divLabel = isStockOption
+    ? t(lang, STR.stockOptionDivLabel)
+    : !divInfo.eligible
     ? t(lang, STR.divBtnLocked, DIVIDEND_THRESHOLD)
     : divInfo.alreadyClaimedToday
     ? t(lang, STR.divBtnDoneToday)
@@ -71,6 +75,10 @@ export function openStockTradeDialog(player, stockKey) {
     if (res.selection === 0) openStockBuyModal(player, stockKey);
     else if (res.selection === 1) openStockSellModal(player, stockKey);
     else if (res.selection === 2) {
+      if (isStockOption) {
+        player.sendMessage(t(lang, STR.stockOptionDivInfo, HRMHRM_STOCK_OPTION_THRESHOLD));
+        return openStockTradeDialog(player, stockKey);
+      }
       claimDividend(player, stockKey);
       openStockTradeDialog(player, stockKey);
     }
@@ -116,6 +124,7 @@ export function openStockBuyModal(player, stockKey, qty = 1) {
       player.setDynamicProperty("acc_emeralds", accNow.emeralds - finalCost);
       player.setDynamicProperty(`acc_stock_${stockKey}`, holdsNow + qty);
       player.setDynamicProperty(`acc_stock_bought_${stockKey}`, Math.round(newAvgBought));
+      applyTrade("stock", stockKey, qty, s.vol);
       player.sendMessage(t(lang, STR.stockBuyMsg, t(lang, s.name), qty, finalCost));
     } else {
       player.sendMessage(t(lang, STR.bankAccShortage));
@@ -160,6 +169,7 @@ export function openStockSellModal(player, stockKey, qty = 1) {
       const pnl = (price - bought) * qty;
       player.setDynamicProperty("acc_emeralds", acc.emeralds + finalGain);
       player.setDynamicProperty(`acc_stock_${stockKey}`, holdsNow - qty);
+      applyTrade("stock", stockKey, -qty, s.vol);
       player.sendMessage(t(lang, STR.stockSellMsg, t(lang, s.name), qty, pnl));
     } else {
       player.sendMessage(t(lang, STR.stockSellShortage));

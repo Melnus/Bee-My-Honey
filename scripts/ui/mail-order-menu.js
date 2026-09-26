@@ -21,17 +21,16 @@ export function openMailOrderMenu(player) {
   const acc = getAccount(player);
   const info = getCreditInfo(player);
 
-  const body = lang === "ja"
-    ? `地平線の彼方から、あなたのチェストまで。§o- Skein -§r\n所持: ${acc.emeralds}E\nカード利用可能額: ${hasCard(player) ? getAvailableCredit(player) + "E" : "未発行"}\nカード延滞: ${info.cardOverdue ? "あり" : "なし"}`
-    : `From beyond the horizon, to your chest. §o- Skein -§r\nBalance: ${acc.emeralds}E\nAvailable credit: ${hasCard(player) ? getAvailableCredit(player) + "E" : "No card"}\nCard overdue: ${info.cardOverdue ? "Yes" : "No"}`;
+  const creditText = hasCard(player) ? t(lang, STR.mailCreditAvailable, getAvailableCredit(player)) : t(lang, STR.mailCreditNone);
+  const body = t(lang, STR.mailMenuBody, acc.emeralds, creditText, info.cardOverdue);
 
   const form = new ActionFormData()
-    .title(lang === "ja" ? "郵便販売 (Skein)" : "Mail Order (Skein)")
+    .title(t(lang, STR.mailMenuTitle))
     .body(body)
     .button(t(lang, STR.mailBrowseCategoriesBtn))
     .button(t(lang, STR.mailBargainBtn))
     .button(t(lang, STR.mailPrimeBtn, hasMailOrderPrimeStandard(player) || hasSkeinPrimePremium(player)))
-    .button(lang === "ja" ? "カード管理" : "Manage Card")
+    .button(t(lang, STR.mailBtnManageCard))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
@@ -50,7 +49,7 @@ function openCategoryList(player) {
   const categories = getMailOrderCategories();
 
   const ad = getDailyAdCopy();
-  const adLine = `§o${lang === "ja" ? ad.ja : ad.en}§r`;
+  const adLine = `§o${t(lang, ad)}§r`;
 
   const form = new ActionFormData()
     .title(t(lang, STR.mailCategoryListTitle))
@@ -75,7 +74,7 @@ function openCatalog(player, catKey) {
   const items = getCatalogForCategory(catKey);
 
   const form = new ActionFormData()
-    .title(lang === "ja" ? "カタログ" : "Catalog")
+    .title(t(lang, STR.mailCatalogTitle))
     .body(t(lang, STR.mailCatalogBody, acc.emeralds, fee));
 
   items.forEach((item) => {
@@ -116,11 +115,11 @@ function handlePurchase(player, item, reopen) {
   const result = purchaseItem(player, item, 1);
   if (!result.ok) {
     const msgs = {
-      card_suspended: lang === "ja" ? "§cカードが利用停止中です。" : "§cYour card is suspended.",
-      no_card: lang === "ja" ? "§c現金が足りず、カードも未発行です。" : "§cNot enough cash, and no card on file.",
-      credit_limit: lang === "ja" ? "§c利用限度額を超えています。" : "§cExceeds your credit limit."
+      card_suspended: t(lang, STR.mailCardSuspendedMsg),
+      no_card: t(lang, STR.mailNoCardMsg),
+      credit_limit: t(lang, STR.mailCreditLimitMsg)
     };
-    player.sendMessage(msgs[result.reason] ?? (lang === "ja" ? "§c購入できませんでした。" : "§cCould not purchase."));
+    player.sendMessage(msgs[result.reason] ?? t(lang, STR.mailPurchaseFailedMsg));
   } else {
     player.sendMessage(t(lang, STR.mailPurchaseMsg, t(lang, item.name), result.fromCash, result.fromCard, result.shipping));
   }
@@ -172,46 +171,38 @@ function openCardManagement(player) {
 
   if (!hasCard(player)) {
     const form = new ActionFormData()
-      .title(lang === "ja" ? "カード発行" : "Card Application")
-      .body(lang === "ja" ? "後払いクレジットカードに申し込みますか？限度額は信用スコアで決まります。" : "Apply for a credit card? Limit is based on your credit score.")
-      .button(lang === "ja" ? "申し込む" : "Apply")
+      .title(t(lang, STR.mailCardApplyTitle))
+      .body(t(lang, STR.mailCardApplyBody))
+      .button(t(lang, STR.mailCardApplyBtn))
       .button(t(lang, STR.back));
 
     form.show(player).then((res) => {
       if (res.canceled || res.selection === 1) return openMailOrderMenu(player);
       const result = applyForCard(player);
       if (!result.approved) {
-        player.sendMessage(lang === "ja" ? `§c審査に通りませんでした(信用スコア${result.score})。` : `§cApplication denied (score ${result.score}).`);
+        player.sendMessage(t(lang, STR.mailCardDeniedMsg, result.score));
       } else {
-        player.sendMessage(
-          lang === "ja"
-            ? `§aカードが発行されました。限度額${result.limit}E / 最低返済額${result.minPayment}E(固定)`
-            : `§aCard issued. Limit ${result.limit}E / Fixed min payment ${result.minPayment}E`
-        );
+        player.sendMessage(t(lang, STR.mailCardIssuedMsg, result.limit, result.minPayment));
       }
       openMailOrderMenu(player);
     }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
     return;
   }
 
-  const body = lang === "ja"
-    ? `利用限度額: ${info.cardLimit}E\n利用残高: ${info.cardBalance}E\n最低返済額(固定): ${info.cardMinPayment}E\n延滞: ${info.cardOverdue ? "あり" : "なし"}`
-    : `Limit: ${info.cardLimit}E\nBalance: ${info.cardBalance}E\nFixed min payment: ${info.cardMinPayment}E\nOverdue: ${info.cardOverdue ? "Yes" : "No"}`;
+  const body = t(lang, STR.mailCardManagementBody, info.cardLimit, info.cardBalance, info.cardMinPayment, info.cardOverdue);
 
   const form = new ActionFormData()
-    .title(lang === "ja" ? "カード管理" : "Card Management")
+    .title(t(lang, STR.mailCardManagementTitle))
     .body(body)
-    .button(lang === "ja" ? "一括返済する" : "Pay Full Balance")
-    .button(lang === "ja" ? "カメさんに相談する(債務整理)" : "Talk to the Turtle (Debt Relief)")
+    .button(t(lang, STR.mailBtnPayFull))
+    .button(t(lang, STR.mailBtnTalkToTurtle))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
     if (res.canceled || res.selection === 2) return openMailOrderMenu(player);
     if (res.selection === 0) {
       const paid = payCardBalance(player, info.cardBalance);
-      player.sendMessage(paid > 0
-        ? (lang === "ja" ? `§a${paid}Eを一括返済しました。` : `§aPaid off ${paid}E.`)
-        : (lang === "ja" ? "§c返済する残高がないか、現金が不足しています。" : "§cNo balance to pay, or insufficient cash."));
+      player.sendMessage(paid > 0 ? t(lang, STR.mailPaidFullMsg, paid) : t(lang, STR.mailNoBalanceOrCashMsg));
       return openCardManagement(player);
     }
     if (res.selection === 1) return openDebtReliefMenu(player);
@@ -224,33 +215,25 @@ function openDebtReliefMenu(player) {
   const info = getCreditInfo(player);
 
   if (info.cardBalance <= 0) {
-    player.sendMessage(lang === "ja" ? "現在、整理すべき債務はありません。" : "You have no debt to relieve.");
+    player.sendMessage(t(lang, STR.mailNoDebtMsg));
     return openCardManagement(player);
   }
 
   const form = new ActionFormData()
-    .title(lang === "ja" ? "カメさんの相談窓口" : "The Turtle's Advisory Desk")
-    .body(
-      lang === "ja"
-        ? `現在の残高: ${info.cardBalance}E\n\n【組み直し】最低返済額を下げ、延滞を解消。利息は継続。信用情報が軽く悪化。\n\n【債務整理】残債を半額に。カードは一定期間停止し、信用情報が大きく悪化。`
-        : `Current balance: ${info.cardBalance}E\n\n[Restructure] Lower min payment, clear overdue. Interest continues. Minor credit hit.\n\n[Settle] Reduce balance by half. Card suspended. Major credit hit.`
-    )
-    .button(lang === "ja" ? "返済計画を組み直す" : "Restructure Plan")
-    .button(lang === "ja" ? "債務整理する" : "Settle Debt")
+    .title(t(lang, STR.mailTurtleDeskTitle))
+    .body(t(lang, STR.mailTurtleDeskBody, info.cardBalance))
+    .button(t(lang, STR.mailBtnRestructure))
+    .button(t(lang, STR.mailBtnSettleDebt))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
     if (res.canceled || res.selection === 2) return openCardManagement(player);
     if (res.selection === 0) {
       const result = restructureCard(player);
-      player.sendMessage(lang === "ja" ? `§a最低返済額を${result.newMin}Eに変更しました。` : `§aMin payment lowered to ${result.newMin}E.`);
+      player.sendMessage(t(lang, STR.mailRestructuredMsg, result.newMin));
     } else {
       const result = settleCardDebt(player);
-      player.sendMessage(
-        lang === "ja"
-          ? `§e残債を${result.reduced}Eに減額しました。カードは利用停止になります。`
-          : `§eBalance reduced to ${result.reduced}E. Card is now suspended.`
-      );
+      player.sendMessage(t(lang, STR.mailSettledMsg, result.reduced));
     }
     openCardManagement(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
