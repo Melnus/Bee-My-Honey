@@ -33,7 +33,7 @@ export function openFuturesMenu(player) {
     const posLabel = qty > 0
       ? t(lang, STR.futuresPosLabelHeld, qty)
       : t(lang, STR.futuresPosLabelNone);
-    form.button(`${t(lang, f.name)}\n${price}E/枚  ${posLabel}\n${spark}`);
+    form.button(`${t(lang, f.name)}\n${t(lang, STR.futuresPriceLine, price)}  ${posLabel}\n${spark}`);
   }
   form.button(t(lang, STR.back));
 

@@ -6,10 +6,18 @@ import { CURRENCIES, CURRENCY_ICONS } from "../data/market-data.js";
 import { MOB_NAMES, MOB_TRADE_ITEMS, itemLocKey } from "../data/mob-trade-data.js";
 import { getCurrencyRate, getCurrentCycleDay, getWeekCurrencyRates, buildIconWaveChart } from "../economy/market-engine.js";
 import { getAccount } from "../economy/bank.js";
+import { PB_ITEMS, PB_MOOD_MAX } from "../data/pb-data.js";
+import { hasQualification } from "../economy/labor.js";
+import { openFreshMarket } from "./fresh-market-menu.js";
+import { ensurePbFresh, getPbStock, getPbBuyPrice, getPbSellPrice, getPbMood, getPbDiscountPercent, petPbCat, giftFishToPbCat, buyFromPb, sellToPb } from "../economy/pb.js";
 
 // ==========================================
 // 動物交易（モブトレード）UI / Mob Trade Menu
 // ==========================================
+// アイテムの払い出しは bank.js の giveItem を使う。
+// 少量は即時、大量付与時は system.runJob でtickをまたいで分割されるため、
+// 以前この画面が独自に持っていた「同一tick内で大量ドロップして鯖に負荷をかける」問題を回避できる。
+// v0.3.4: 材木取引はここから分岐させず、現物取引(golem-menu.js)の一般資源に統合する方針に変更。
 
 // 決定論的な日替わりシャッフル用の簡易PRNG（同じ日・同じ通貨なら全プレイヤーで同じ結果になる）
 function mulberry32(seed) {
@@ -52,6 +60,8 @@ function findItemSlot(container, typeId) {
 }
 
 // 交易窓口トップ画面
+// 窓口ごとに「買取」と「換金レート」の間へ専用の入口を差し込む(APL=猫の店PB、GLB=生鮮市場)。
+// ボタンの有無で選択インデックスがずれるので、ボタンと処理を対にした配列で管理する。
 export function openMobTradeMenu(player, currKey) {
   const lang = getLang(player);
   const c = CURRENCIES[currKey];
@@ -63,20 +73,26 @@ export function openMobTradeMenu(player, currKey) {
     `${t(lang, STR.mobTradeShowoff, mobName, curName)}\n\n` +
     `${t(lang, STR.mobTradeHoldLabel, acc[currKey], curName)}`;
 
-  const form = new ActionFormData()
-    .title(curName)
-    .body(body)
-    .button(t(lang, STR.mobTradeBuyBtn))
-    .button(t(lang, STR.mobTradeSellBtn))
-    .button(t(lang, STR.mobTradeRateBtn))
-    .button(t(lang, STR.mobTradeLeaveBtn));
+  const actions = [
+    { label: STR.mobTradeBuyBtn, run: () => openMobBuyList(player, currKey) },
+    { label: STR.mobTradeSellBtn, run: () => openMobSellList(player, currKey) }
+  ];
+  if (currKey === "apple") actions.push({ label: STR.mobTradePbBtn, run: () => openPbShop(player, currKey) });
+  if (currKey === "glow_berry") {
+    actions.push({
+      label: STR.mobTradeFmBtn,
+      run: () => openFreshMarket(player, () => openMobTradeMenu(player, currKey))
+    });
+  }
+  actions.push({ label: STR.mobTradeRateBtn, run: () => openMobRateInfo(player, currKey) });
+  actions.push({ label: STR.mobTradeLeaveBtn, run: () => openMobLeaveDialog(player, currKey) });
+
+  const form = new ActionFormData().title(curName).body(body);
+  for (const a of actions) form.button(t(lang, a.label));
 
   form.show(player).then((res) => {
     if (res.canceled) return;
-    if (res.selection === 0) openMobBuyList(player, currKey);
-    else if (res.selection === 1) openMobSellList(player, currKey);
-    else if (res.selection === 2) openMobRateInfo(player, currKey);
-    else if (res.selection === 3) openMobLeaveDialog(player, currKey);
+    actions[res.selection]?.run();
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
@@ -249,4 +265,130 @@ export function openMobLeaveDialog(player, currKey) {
       player.sendMessage(t(lang, STR.mobTradeShooResult, mobName));
     }
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+// ==========================================
+// Paws & Blackpots (PB) — 猫の店 UI (APL窓口から入る)
+// ==========================================
+
+// 店のトップ画面: 品目一覧(そのまま購入)+ 納品 / 撫でる / 魚をあげる
+export function openPbShop(player, currKey) {
+  const lang = getLang(player);
+  ensurePbFresh();
+  const acc = getAccount(player);
+  const curName = t(lang, CURRENCIES.apple.name);
+  const mood = getPbMood(player);
+  const moodLabel = t(lang, STR.pbMoodLabels)[Math.min(mood, PB_MOOD_MAX)];
+
+  const form = new ActionFormData()
+    .title(t(lang, STR.pbTitle))
+    .body(t(lang, STR.pbBody, acc.apple, curName, moodLabel, getPbDiscountPercent(player)));
+
+  for (const item of PB_ITEMS) {
+    const stock = getPbStock(item);
+    const price = getPbBuyPrice(player, item);
+    const line = stock <= 0 ? t(lang, STR.pbItemSoldOutLine)
+      : item.license && !hasQualification(player, item.license) ? t(lang, STR.pbItemLicenseLine, price, curName)
+      : t(lang, STR.pbItemLine, price, curName, stock);
+    form.button({ rawtext: [{ translate: itemLocKey({ id: item.id, key: item.locKey }) }, { text: line }] });
+  }
+  form.button(t(lang, STR.pbSellBtn));
+  form.button(t(lang, STR.pbPetBtn));
+  form.button(t(lang, STR.pbGiftBtn));
+  form.button(t(lang, STR.back));
+
+  const n = PB_ITEMS.length;
+  form.show(player).then((res) => {
+    if (res.canceled) return;
+    if (res.selection < n) return executePbBuy(player, currKey, PB_ITEMS[res.selection]);
+    if (res.selection === n) return openPbSellList(player, currKey);
+    if (res.selection === n + 1) return executePbPet(player, currKey);
+    if (res.selection === n + 2) return executePbGift(player, currKey);
+    return openMobTradeMenu(player, currKey);
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+function executePbBuy(player, currKey, item) {
+  const lang = getLang(player);
+  const result = buyFromPb(player, item);
+  if (!result.ok) {
+    const msg = result.reason === "licenseRequired" ? STR.pbLicenseRequired
+      : result.reason === "soldOut" ? STR.pbSoldOut
+      : STR.mobTradeInsufficientCurrency;
+    player.sendMessage(t(lang, msg));
+  } else {
+    player.sendMessage({
+      rawtext: [
+        { text: t(lang, STR.mobTradeBuySuccessPrefix) },
+        { translate: itemLocKey({ id: item.id, key: item.locKey }) },
+        { text: t(lang, STR.mobTradeBuySuccessSuffix) }
+      ]
+    });
+  }
+  openPbShop(player, currKey);
+}
+
+function openPbSellList(player, currKey) {
+  const lang = getLang(player);
+  const curName = t(lang, CURRENCIES.apple.name);
+
+  const form = new ActionFormData()
+    .title(t(lang, STR.pbSellTitle))
+    .body(t(lang, STR.pbSellDesc));
+  for (const item of PB_ITEMS) {
+    form.button({
+      rawtext: [
+        { translate: itemLocKey({ id: item.id, key: item.locKey }) },
+        { text: t(lang, STR.mobTradeSellItemLine, getPbSellPrice(item), curName) }
+      ]
+    });
+  }
+  form.button(t(lang, STR.back));
+
+  form.show(player).then((res) => {
+    if (res.canceled || res.selection === PB_ITEMS.length) return openPbShop(player, currKey);
+    executePbSell(player, currKey, PB_ITEMS[res.selection]);
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+function executePbSell(player, currKey, item) {
+  const lang = getLang(player);
+  const result = sellToPb(player, item);
+  if (!result.ok) {
+    player.sendMessage({
+      rawtext: [
+        { text: t(lang, STR.mobTradeNoItemPrefix) },
+        { translate: itemLocKey({ id: item.id, key: item.locKey }) },
+        { text: t(lang, STR.mobTradeNoItemSuffix) }
+      ]
+    });
+  } else {
+    player.sendMessage({
+      rawtext: [
+        { text: t(lang, STR.mobTradeSellSuccessPrefix) },
+        { translate: itemLocKey({ id: item.id, key: item.locKey }) },
+        { text: t(lang, STR.mobTradeSellSuccessSuffix, result.price, t(lang, CURRENCIES.apple.name)) }
+      ]
+    });
+  }
+  openPbSellList(player, currKey);
+}
+
+function executePbPet(player, currKey) {
+  const lang = getLang(player);
+  const result = petPbCat(player);
+  if (!result.ok) player.sendMessage(t(lang, STR.pbPetAlready));
+  else player.sendMessage(t(lang, STR.pbPetDone, t(lang, STR.pbMoodLabels)[result.mood]));
+  openPbShop(player, currKey);
+}
+
+function executePbGift(player, currKey) {
+  const lang = getLang(player);
+  const result = giftFishToPbCat(player);
+  if (!result.ok) {
+    player.sendMessage(t(lang, result.reason === "moodMax" ? STR.pbMoodMax : STR.pbNoFish));
+  } else {
+    player.sendMessage(t(lang, STR.pbGiftDone, t(lang, STR.pbMoodLabels)[result.mood]));
+  }
+  openPbShop(player, currKey);
 }

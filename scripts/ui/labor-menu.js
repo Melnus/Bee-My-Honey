@@ -179,7 +179,7 @@ function openSkillEditForm(player, category, lecternLocation) {
   const resume = getOrCreatePlayerResume(player, category);
   const form = new ModalFormData()
     .title(t(lang, STR.laborSkillEditTitle))
-    .textField(t(lang, STR.laborSkillEditField), "", resume.skills.join(","));
+    .textField(t(lang, STR.laborSkillEditField), "", { defaultValue: resume.skills.join(",") });
 
   form.show(player).then((res) => {
     if (res.canceled) return openQuestBoard(player, category, lecternLocation);
