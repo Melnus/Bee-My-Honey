@@ -164,8 +164,197 @@ export const COMMODITIES = {
     baseRate: 1.5,
     volatility: 0.5,
     desc: { ja: "小口で値動きはやや荒め", en: "Small denomination, choppier moves" }
+  },
+  // ここから v0.3.4 #1 で追加。ネザークォーツ・レッドストーンは希少資源として従来通り
+  // 小口取引(現物取引メニュー)にそのまま乗る。丸石・鉄・銅・ガラスは一般資源で、
+  // bulkOnly: true を付けてシュルカー単位のバルク取引専用に切り出す(現物取引メニューには出さない)。
+  cobblestone: {
+    name: { ja: "丸石", en: "Cobblestone" },
+    itemId: "minecraft:cobblestone",
+    blockId: "minecraft:cobblestone",
+    key: "item.cobblestone.name",
+    baseRate: 0.05,
+    volatility: 0.1,
+    bulkOnly: true,
+    desc: { ja: "供給過多になりやすい建材、値動きは穏やか", en: "Abundant building material, low volatility" }
+  },
+  iron_ingot: {
+    name: { ja: "鉄インゴット (FE)", en: "Iron Ingot (FE)" },
+    itemId: "minecraft:iron_ingot",
+    blockId: "minecraft:iron_block",
+    key: "item.iron_ingot.name",
+    baseRate: 1.5,
+    volatility: 0.2,
+    bulkOnly: true,
+    desc: { ja: "汎用資材、比較的安定", en: "General-purpose material, fairly stable" }
+  },
+  copper_ingot: {
+    name: { ja: "銅インゴット (CU)", en: "Copper Ingot (CU)" },
+    itemId: "minecraft:copper_ingot",
+    blockId: "minecraft:copper_block",
+    key: "item.copper_ingot.name",
+    baseRate: 0.8,
+    volatility: 0.25,
+    bulkOnly: true,
+    desc: { ja: "近年需要が伸びている資材", en: "Rising-demand material" }
+  },
+  glass: {
+    name: { ja: "ガラス", en: "Glass" },
+    itemId: "minecraft:glass",
+    blockId: "minecraft:glass",
+    key: "item.glass.name",
+    baseRate: 0.1,
+    volatility: 0.1,
+    bulkOnly: true,
+    desc: { ja: "建材、値動きは穏やか", en: "Building material, low volatility" }
+  },
+  quartz: {
+    name: { ja: "ネザークォーツ (QZ)", en: "Nether Quartz (QZ)" },
+    itemId: "minecraft:quartz",
+    blockId: "minecraft:quartz_block",
+    key: "item.quartz.name",
+    baseRate: 1.2,
+    volatility: 0.3,
+    desc: { ja: "ネザー産、やや値動きが荒い", en: "Nether-sourced, choppier moves" }
+  },
+  redstone: {
+    name: { ja: "レッドストーン (RS)", en: "Redstone (RS)" },
+    itemId: "minecraft:redstone",
+    blockId: "minecraft:redstone_block",
+    key: "item.redstone.name",
+    baseRate: 1.0,
+    volatility: 0.3,
+    desc: { ja: "機構向け需要で値動きが荒め", en: "Demand from redstone builds, choppier moves" }
+  },
+  // v0.3.4 #2 で追加。トウヒの原木+植木鉢のスイートベリー取引画面(mob-trade-menu.js)から
+  // 分岐する「材木取引」の原木バルク取引向け。#1の一般資源と同じくbulkOnly(シュルカー単位のみ)。
+  // 苗木8種類全部を対象にする(材木先物の対象銘柄も兼ねる。品種ごとに別銘柄・別需要圧力プール)。
+  spruce_log: {
+    name: { ja: "トウヒの原木", en: "Spruce Log" },
+    itemId: "minecraft:spruce_log",
+    blockId: null,
+    key: "item.spruceLog.name",
+    baseRate: 0.3,
+    volatility: 0.15,
+    bulkOnly: true,
+    desc: { ja: "建材需要が中心、値動きは穏やか", en: "Mostly building demand, low volatility" }
+  },
+  oak_log: {
+    name: { ja: "オークの原木", en: "Oak Log" },
+    itemId: "minecraft:oak_log",
+    blockId: null,
+    key: "item.oakLog.name",
+    baseRate: 0.3,
+    volatility: 0.1,
+    bulkOnly: true,
+    desc: { ja: "最も一般的な建材、値動きは穏やか", en: "Most common lumber, low volatility" }
+  },
+  birch_log: {
+    name: { ja: "シラカバの原木", en: "Birch Log" },
+    itemId: "minecraft:birch_log",
+    blockId: null,
+    key: "item.birchLog.name",
+    baseRate: 0.3,
+    volatility: 0.1,
+    bulkOnly: true,
+    desc: { ja: "内装用の需要が中心", en: "Mostly interior-finish demand" }
+  },
+  jungle_log: {
+    name: { ja: "ジャングルの原木", en: "Jungle Log" },
+    itemId: "minecraft:jungle_log",
+    blockId: null,
+    key: "item.jungleLog.name",
+    baseRate: 0.35,
+    volatility: 0.2,
+    bulkOnly: true,
+    desc: { ja: "供給地が偏るためやや値動きが荒い", en: "Choppier due to limited source biomes" }
+  },
+  acacia_log: {
+    name: { ja: "アカシアの原木", en: "Acacia Log" },
+    itemId: "minecraft:acacia_log",
+    blockId: null,
+    key: "item.acaciaLog.name",
+    baseRate: 0.35,
+    volatility: 0.2,
+    bulkOnly: true,
+    desc: { ja: "供給地が偏るためやや値動きが荒い", en: "Choppier due to limited source biomes" }
+  },
+  dark_oak_log: {
+    name: { ja: "ダークオークの原木", en: "Dark Oak Log" },
+    itemId: "minecraft:dark_oak_log",
+    blockId: null,
+    key: "item.darkOakLog.name",
+    baseRate: 0.35,
+    volatility: 0.15,
+    bulkOnly: true,
+    desc: { ja: "内装用の需要が中心", en: "Mostly interior-finish demand" }
+  },
+  cherry_log: {
+    name: { ja: "サクラの原木", en: "Cherry Log" },
+    itemId: "minecraft:cherry_log",
+    blockId: null,
+    key: "item.cherryLog.name",
+    baseRate: 0.5,
+    volatility: 0.3,
+    bulkOnly: true,
+    desc: { ja: "希少で装飾需要が高く値動きが荒い", en: "Scarce, decorative demand, choppy moves" }
+  },
+  mangrove_log: {
+    name: { ja: "マングローブの原木", en: "Mangrove Log" },
+    itemId: "minecraft:mangrove_log",
+    blockId: null,
+    key: "item.mangroveLog.name",
+    baseRate: 0.45,
+    volatility: 0.25,
+    bulkOnly: true,
+    desc: { ja: "供給地が偏るためやや値動きが荒い", en: "Choppier due to limited source biomes" }
+  },
+  // v0.3.4: 土砂系。一旦「一般資源」に統合する(村限定という当初の線引きは撤回)。
+  dirt: {
+    name: { ja: "土", en: "Dirt" },
+    itemId: "minecraft:dirt",
+    blockId: null,
+    key: "item.dirt.name",
+    baseRate: 0.02,
+    volatility: 0.05,
+    bulkOnly: true,
+    desc: { ja: "無尽蔵に近い、最も安価な建材", en: "Near-infinite supply, the cheapest fill material" }
+  },
+  sand: {
+    name: { ja: "砂", en: "Sand" },
+    itemId: "minecraft:sand",
+    blockId: null,
+    key: "item.sand.name",
+    baseRate: 0.03,
+    volatility: 0.05,
+    bulkOnly: true,
+    desc: { ja: "ガラス生産等の需要が下支え", en: "Underpinned by glass-making demand" }
+  },
+  gravel: {
+    name: { ja: "砂利", en: "Gravel" },
+    itemId: "minecraft:gravel",
+    blockId: null,
+    key: "item.gravel.name",
+    baseRate: 0.03,
+    volatility: 0.05,
+    bulkOnly: true,
+    desc: { ja: "無尽蔵に近い、値動きは穏やか", en: "Near-infinite supply, low volatility" }
+  },
+  clay_ball: {
+    name: { ja: "粘土", en: "Clay" },
+    itemId: "minecraft:clay_ball",
+    blockId: "minecraft:clay",
+    key: "item.clay.name",
+    baseRate: 0.08,
+    volatility: 0.1,
+    bulkOnly: true,
+    desc: { ja: "陶器・レンガ需要が中心", en: "Mostly pottery and brick demand" }
   }
 };
+
+// v0.3.4 #1: 大口現物取引(バルク取引)の標準単位。シュルカーボックス1個 = 27スタック = 1,728個。
+// 法人格制度(将来のマイルストーン)が入るまでは、1回の取引はこの単位が上限となる。
+export const SHULKER_UNIT_QTY = 27 * 64;
 
 // ブロック化されたアイテムをカウント・換金する際に使う個数（ブロック1個 = 素材9個）
 export const BLOCK_UNIT_SIZE = 9;
@@ -245,7 +434,25 @@ export const STOCK_ICONS = {
 export const COMMODITY_ICONS = {
   diamond: "§b●",
   gold_ingot: "§6●",
-  lapis_lazuli: "§9●"
+  lapis_lazuli: "§9●",
+  quartz: "§f●",
+  redstone: "§4●",
+  cobblestone: "§8●",
+  iron_ingot: "§7●",
+  copper_ingot: "§6●",
+  glass: "§e●",
+  spruce_log: "§2●",
+  oak_log: "§6●",
+  birch_log: "§f●",
+  jungle_log: "§a●",
+  acacia_log: "§c●",
+  dark_oak_log: "§8●",
+  cherry_log: "§d●",
+  mangrove_log: "§3●",
+  dirt: "§6●",
+  sand: "§e●",
+  gravel: "§7●",
+  clay_ball: "§b●"
 };
 export const FUTURES_ICONS = {
   rose: "§c●",
