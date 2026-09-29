@@ -44,3 +44,16 @@ UIが絡む新しい分岐を書いたら、実際にゲーム内でそのボタ
 2. 変更したいファイルだけでなく、関連ファイルを `grep` で洗い出す(1.と2.参照)
 3. 変更後に `check_undefined.js` を実行する
 4. 変更点を1〜2行で要約してユーザーに報告する(「何を」「なぜ」「どこを直したか」)
+5. 実機でしか確認できない部分(§6)は、確認手順を添えて渡す
+
+## 6. Script APIの制約は実機で確認する(シミュレータを信用しすぎない)
+
+シミュレータ(Node上のモック)では動いても、実機のBedrockでは動かないことがある。v0.4.0の食品鮮度は、シミュレータでは全部通っていたのに、実機では魚や肉が一切腐らなかった(v0.4.1で修正)。
+新しい仕組みを入れたら、ユーザーに渡す前に「実機で確認してほしい手順」を1〜2行で添えること。
+
+既知の制約:
+
+- **スタックできるアイテムには、動的プロパティを書けない**(`ItemStack.setDynamicProperty`が`UnsupportedFunctionalityError: Cannot set dynamic properties on stackable items`で失敗する。書けるのは最大スタックが1のアイテムだけ)。個体ごとの情報が必要なときは、loreに見えない色コードで埋め込む(`economy/freshness.js`の`writeStamp`/`readStamp`を参照)。
+- **`world.getDynamicProperty`は起動直後(early execution)には読めない**。初回利用時に遅延して読む(`freshness.js`の`advanceClock`と同じ)。
+- **ワールドの動的プロパティは1本あたり約32KBが上限**。出品リストのようにJSONで溜めるものは、件数に上限を設ける(`FM_MAX_ORDERS_PER_GENRE`)。
+- `event.cancel`などの`beforeEvents`内では、ワールドを変更する処理を直接呼べない。`system.run(...)`で1tick後に回す(`main.js`の入口判定がその形)。
