@@ -48,7 +48,9 @@ function decayAllDemand() {
   const groups = [
     ["currency", CURRENCIES],
     ["stock", STOCKS],
-    ["commodity", COMMODITIES]
+    ["commodity", COMMODITIES],
+    ["commodity_bulk", COMMODITIES] // v0.3.4 #1: シュルカー単位のバルク取引はB2C(commodity)と
+                                     // 需要圧力プールを分ける。B2C/B2Bを混同しないための分離。
   ];
   for (const [category, table] of groups) {
     for (const key of Object.keys(table)) {
@@ -127,6 +129,25 @@ export function getCommodityPrice(key, day = getCurrentCycleDay()) {
 export function getWeekCommodityPrices(key) {
   const prices = [];
   for (let d = 1; d <= 7; d++) prices.push(getCommodityPrice(key, d));
+  return prices;
+}
+
+// v0.3.4 #1: シュルカー単位のバルク取引(一般資源)専用の価格関数。
+// 相場のベースパターン(baseRate/volatility/週間パターン)はB2C側(getCommodityPrice)と共有するが、
+// 需要圧力だけは別プール("commodity_bulk")を参照する。シュルカー1箱=1,728個という
+// B2C側とは桁違いの取引量をB2C価格に混ぜると、小口価格まで一撃で吹き飛ぶため分離している。
+export function getBulkCommodityPrice(key, day = getCurrentCycleDay()) {
+  const c = COMMODITIES[key];
+  const seed = world.getDynamicProperty(`commodity_seed_${key}`) ?? 1;
+  const val = patternValue(seed, day);
+  const pressure = getDemandPressure("commodity_bulk", key);
+  const price = c.baseRate * (1.0 + val * c.volatility) * (1 + pressure);
+  return Math.max(0.5, parseFloat(price.toFixed(1)));
+}
+
+export function getWeekBulkCommodityPrices(key) {
+  const prices = [];
+  for (let d = 1; d <= 7; d++) prices.push(getBulkCommodityPrice(key, d));
   return prices;
 }
 
