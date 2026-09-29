@@ -5,6 +5,7 @@ import { MOB_EXCHANGE_BLOCKS } from "./data/mob-trade-data.js";
 import { startWeeklyMarketCycle } from "./economy/market-engine.js";
 import { startBankInterestOnSpawn } from "./economy/bank.js";
 import { startInsuranceDeathWatch } from "./economy/insurance.js";
+import { startFreshnessPatrol } from "./economy/freshness.js";
 
 import { hasFlowerPotAbove, summonWanderingTrader, startTraderTetherLoop } from "./trader/wandering-trader.js";
 
@@ -27,6 +28,9 @@ startWeeklyMarketCycle();
 
 // 口座＆インベントリ管理: ログイン時の銀行利子チェック
 startBankInterestOnSpawn();
+
+// 食品の鮮度(在庫側): プレイヤーのインベントリを5秒ごとに走査し、鮮度のスタンプ(loreに埋め込み)を更新。期限切れは腐った肉に変換
+startFreshnessPatrol();
 
 // 行商人召喚: 係留中の行商人の鈍足維持・引き戻しループ
 startTraderTetherLoop();
