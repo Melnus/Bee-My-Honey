@@ -208,6 +208,91 @@ export const STR = {
   mobTradeBuyBtn: { ja: "●今日の取引商品", en: "Today's Goods for Sale" },
   mobTradeSellBtn: { ja: "●今日の買取商品", en: "Today's Buyback Items" },
   mobTradeRateBtn: { ja: "●換金レート", en: "Exchange Rate" },
+  // v0.3.4 #3: Paws & Blackpots(APL窓口=干し草の俵から入る猫の店)
+  mobTradePbBtn: { ja: "●Paws & Blackpots(猫の店)", en: "Paws & Blackpots (Cat's Shop)" },
+  pbTitle: { ja: "Paws & Blackpots", en: "Paws & Blackpots" },
+  pbBody: {
+    ja: (bal, cur, moodLabel, pct) => `ネコの店主が気まぐれに値札をつけている…\n所持: ${bal} ${cur}\nネコの機嫌: ${moodLabel}(値引き ${pct}%)`,
+    en: (bal, cur, moodLabel, pct) => `The cat shopkeeper prices things on a whim…\nYou have: ${bal} ${cur}\nCat's mood: ${moodLabel} (${pct}% off)`
+  },
+  pbMoodLabels: {
+    ja: ["そっぽを向いている", "ふつう", "ちょっとご機嫌", "ご機嫌", "とてもご機嫌", "ごろごろ絶好調"],
+    en: ["Looking away", "Neutral", "Slightly pleased", "Pleased", "Very pleased", "Purring loudly"]
+  },
+  pbItemLine: { ja: (price, cur, stock) => `\n${price} ${cur} ・在庫 ${stock}`, en: (price, cur, stock) => `\n${price} ${cur} · Stock ${stock}` },
+  pbItemSoldOutLine: { ja: "\n§c売り切れ", en: "\n§cSold out" },
+  pbItemLicenseLine: { ja: (price, cur) => `\n${price} ${cur} ・§e要ネザーライセンス`, en: (price, cur) => `\n${price} ${cur} · §eNether license required` },
+  pbSellBtn: { ja: "納品する(買い取ってもらう)", en: "Deliver Goods (Sell to Shop)" },
+  pbPetBtn: { ja: "ネコを撫でる", en: "Pet the Cat" },
+  pbGiftBtn: { ja: "魚をあげる", en: "Give the Cat a Fish" },
+  pbSellTitle: { ja: "納品(買取)", en: "Deliver Goods" },
+  pbSellDesc: { ja: "※実物を1個ずつ買い取ってもらえる", en: "*The shop buys items one at a time" },
+  pbLicenseRequired: { ja: "§cこれはネザーライセンスがないと売ってもらえないようだ…", en: "§cYou need a Nether license to buy this…" },
+  pbSoldOut: { ja: "§c売り切れのようだ…", en: "§cSold out…" },
+  pbPetDone: { ja: (label) => `§aネコは目を細めて喉を鳴らした…(機嫌: ${label})`, en: (label) => `§aThe cat purrs with narrowed eyes… (Mood: ${label})` },
+  pbPetAlready: { ja: "§7今日はもう撫でさせてもらった。", en: "§7You already petted the cat today." },
+  pbGiftDone: { ja: (label) => `§aネコは魚をぺろりと平らげた！(機嫌: ${label})`, en: (label) => `§aThe cat gobbles up the fish! (Mood: ${label})` },
+  pbNoFish: { ja: "§cあげられる魚(タラ/サケ)を持っていない。", en: "§cYou have no fish (cod/salmon) to give." },
+  pbMoodMax: { ja: "§7ネコはもう十分ご機嫌だ。", en: "§7The cat is already in top spirits." },
+
+  // v0.3.4 #3: 生鮮市場(GLB窓口=苔ブロックから入るオーダーボード)
+  mobTradeFmBtn: { ja: "●生鮮市場", en: "Fresh Market" },
+  fmTitle: { ja: "生鮮市場", en: "Fresh Market" },
+  fmBody: {
+    ja: (bal, cur) => `ウーパールーパーが市場の水槽から顔を出している…\n所持: ${bal} ${cur}\n※実在庫制。誰かが納品しないと品物は並ばない。`,
+    en: (bal, cur) => `The axolotl peeks out of the market tank…\nYou have: ${bal} ${cur}\n*Real stock only: goods appear only when someone delivers them.`
+  },
+  fmGenreLine: { ja: (n) => `\n出品 ${n}件`, en: (n) => `\n${n} listing(s)` },
+  fmGenreBody: {
+    ja: (genre, bal, cur) => `${genre}\n所持: ${bal} ${cur}`,
+    en: (genre, bal, cur) => `${genre}\nYou have: ${bal} ${cur}`
+  },
+  fmItemLine: { ja: (price, cur, n) => `\n最安 ${price} ${cur} ・出品 ${n}件`, en: (price, cur, n) => `\nFrom ${price} ${cur} · ${n} listing(s)` },
+  fmItemNoneLine: { ja: "\n§7出品なし", en: "\n§7No listings" },
+  fmDeliverBtn: { ja: "納品する(満載のシュルカー)", en: "Deliver (full shulker)" },
+  fmChartHeader: { ja: "価格推移(直近の約定)", en: "Price history (recent trades)" },
+  fmChartNone: { ja: "§7(まだ約定履歴がありません)", en: "§7(No trades yet)" },
+  fmChartLatest: { ja: (p, cur) => `直近 ${p} ${cur}/個`, en: (p, cur) => `Latest ${p} ${cur}/each` },
+  fmNoOrders: { ja: "§7出品はまだありません。", en: "§7No listings yet." },
+  fmOrderLine: { ja: (no, price, cur, qty) => `#${no}  ${price} ${cur} × ${qty}個`, en: (no, price, cur, qty) => `#${no}  ${price} ${cur} x ${qty}` },
+  fmOrderMeta: { ja: (fresh, region) => `\n${fresh} ・産地: ${region}`, en: (fresh, region) => `\n${fresh} · Origin: ${region}` },
+  fmFreshLabel: { ja: (pct) => `鮮度 ${pct}%`, en: (pct) => `Freshness ${pct}%` },
+  fmFreshNone: { ja: "鮮度なし", en: "No spoilage" },
+  fmOwnMark: { ja: " §e(あなたの出品)", en: " §e(yours)" },
+  fmBuyQtyBody: {
+    ja: (no, price, cur, stock, bal) => `出品 #${no}\n単価: ${price} ${cur} ・残り ${stock}個\n所持: ${bal} ${cur}`,
+    en: (no, price, cur, stock, bal) => `Listing #${no}\nPrice: ${price} ${cur} · ${stock} left\nYou have: ${bal} ${cur}`
+  },
+  fmBuyQtyBtn: { ja: (q, total, cur) => `${q}個(${total} ${cur})`, en: (q, total, cur) => `${q} (${total} ${cur})` },
+  fmBuyOwn: { ja: "§7自分の出品は買えません。", en: "§7You can't buy your own listing." },
+  fmBuyInsufficient: { ja: "§cGLBが足りません。", en: "§cNot enough GLB." },
+  fmBuyGone: { ja: "§c出品が見つかりません(売り切れ・鮮度切れの可能性)。", en: "§cListing not found (sold out or spoiled)." },
+  fmBuyLack: { ja: (n) => `§c残りが${n}個しかありません。`, en: (n) => `§cOnly ${n} left.` },
+  fmBuyDoneSuffix: { ja: (qty, total, cur) => `を${qty}個購入した(-${total} ${cur})`, en: (qty, total, cur) => ` x${qty} (-${total} ${cur})` },
+  fmEarnings: { ja: (n, cur) => `§a出品した商品が売れて${n} ${cur}を受け取った。`, en: (n, cur) => `§aYour listings sold: received ${n} ${cur}.` },
+  fmDeliverNone: {
+    ja: "§c近くに納品できるシュルカーがありません(全27スロットが最大スタックで埋まり、同じジャンルの品だけ入っていること)。",
+    en: "§cNo deliverable shulker nearby (all 27 slots full stacks, one genre only)."
+  },
+  fmDeliverHeader: {
+    ja: (genre, region) => `${genre}の満載シュルカーを納品します。\n産地: ${region}(価格の目安に反映されます)\n最終価格はあなたが決められます。\n\n`,
+    en: (genre, region) => `Delivering a full ${genre} shulker.\nOrigin: ${region} (reflected in the price guide)\nYou set the final price.\n\n`
+  },
+  fmDeliverKindSuffix: { ja: (count, lo, hi, cur) => ` ×${count}\n  目安 ${lo}〜${hi} ${cur}/個\n`, en: (count, lo, hi, cur) => ` x${count}\n  Guide ${lo}-${hi} ${cur}/each\n` },
+  fmDeliverInputBtn: { ja: "価格を入力して納品する", en: "Set prices and deliver" },
+  fmDeliverPriceLabel: { ja: (lo, hi, cur) => ` (目安 ${lo}〜${hi} ${cur}/個)`, en: (lo, hi, cur) => ` (guide ${lo}-${hi} ${cur}/each)` },
+  fmDeliverDone: { ja: (n) => `§a${n}品目を出品しました。売れると自動で口座に入金されます。`, en: (n) => `§aListed ${n} item type(s). Earnings are deposited automatically when sold.` },
+  fmDeliverBoardFull: { ja: "§c掲示板が一杯です。出品が捌けてからもう一度どうぞ。", en: "§cThe board is full. Try again after some listings sell." },
+
+  // 食品の鮮度(在庫側巡回)
+  futuresPriceLine: { ja: (price) => `${price}E/枚`, en: (price) => `${price}E/share` },
+  freshnessRotted: { ja: (n) => `§c食べ物が腐ってしまった…(${n}個)`, en: (n) => `§cSome food rotted (${n})` },
+  freshnessLoreLine: { ja: (pct) => `§7鮮度: ${pct}%`, en: (pct) => `§7Freshness: ${pct}%` },
+  freshnessLoreWarn: { ja: "§c変な匂いがする…もうしまわないと…", en: "§cIt smells off... better put it away." },
+  freshnessDebugAged: { ja: (n) => `§7[鮮度] 手持ちの食品を${n}日分進めました。`, en: (n) => `§7[Freshness] Advanced held food by ${n} day(s).` },
+  freshnessDebugLine: { ja: (id, n, age, life) => `§7[鮮度] ${id} ×${n}: ${age} / ${life} 日`, en: (id, n, age, life) => `§7[Freshness] ${id} x${n}: ${age} / ${life} days` },
+  freshnessDebugStampFail: { ja: (e) => `§c[鮮度] スタンプを書き込めませんでした: ${e}`, en: (e) => `§c[Freshness] Could not write the stamp: ${e}` },
+  freshnessDebugNone: { ja: "§7[鮮度] 手持ちに対象の食品がありません。", en: "§7[Freshness] No perishable food in your inventory." },
   mobTradeLeaveBtn: { ja: "●いや今日はやめとくよ", en: "Not today" },
 
   mobTradeBuyTitle: { ja: "今日の取引商品", en: "Today's Goods for Sale" },
@@ -260,6 +345,18 @@ export const STR = {
   golemBuyRawtextSuffix: { ja: (qty, cost) => `を${qty}個購入した(-${cost} E)`, en: (qty, cost) => ` (-${cost} E)` },
   golemSellRawtextPrefix: { ja: () => "§b", en: (qty) => `§bSold ${qty}x ` },
   golemSellRawtextSuffix: { ja: (qty, gain) => `を${qty}個売却した(+${gain} E)`, en: (qty, gain) => ` (+${gain} E)` },
+  // v0.3.4 #1: 現物取引のカテゴリ分岐(希少資源/一般資源)・一般資源のシュルカー単位バルク取引
+  golemCategoryBody: { ja: "取り扱う資産の種類を選んでください。", en: "Choose an asset category." },
+  golemCategoryRare: { ja: "希少資源", en: "Rare Resources" },
+  golemCategoryGeneral: { ja: "一般資源", en: "General Resources" },
+  golemBulkPriceLabel: { ja: (n) => `シュルカー1箱(1,728個)あたり: ${n} E`, en: (n) => `Per shulker (1,728): ${n} E` },
+  golemBulkBuyButton: { ja: "空のシュルカーに買う", en: "Buy into an empty shulker" },
+  golemBulkSellButton: { ja: "満載のシュルカーを売る", en: "Sell a full shulker" },
+  golemBulkNoEmptyShulker: { ja: "§c近くに空のシュルカーボックスがありません。", en: "§cNo empty shulker box nearby." },
+  golemBulkNoMatchingFullShulker: { ja: "§c近くにこの資源で満載のシュルカーボックスがありません。", en: "§cNo matching full shulker box nearby." },
+  golemBulkInsufficientFunds: { ja: "§cエメラルドが足りません。", en: "§cNot enough Emeralds." },
+  golemBulkBuySuccess: { ja: (item, cost) => `§a${item}を1シュルカー分(1,728個)購入した(-${cost} E)`, en: (item, cost) => `§aBought 1 shulker (1,728x) of ${item} (-${cost} E)` },
+  golemBulkSellSuccess: { ja: (item, gain) => `§b${item}を1シュルカー分(1,728個)売却した(+${gain} E)`, en: (item, gain) => `§bSold 1 shulker (1,728x) of ${item} (+${gain} E)` },
 
   // --- 郵便販売カタログ(カテゴリ制) / Mail Order Catalog (categorized) ---
   mailBrowseCategoriesBtn: { ja: "カタログを見る（カテゴリ別）", en: "Browse Catalog (by Category)" },
