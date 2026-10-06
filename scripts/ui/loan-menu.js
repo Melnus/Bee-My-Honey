@@ -1,3 +1,4 @@
+import { scaleEInt } from "../economy/price-level.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
@@ -47,7 +48,7 @@ export function openBorrowMenu(player) {
   form.body(t(lang, STR.loanBorrowPlanBody));
 
   LOAN_TIERS.forEach((tier) => {
-    form.button(t(lang, STR.loanTierBtn, tier.amount, tier.difficulty));
+    form.button(t(lang, STR.loanTierBtn, scaleEInt(tier.amount), tier.difficulty));
   });
   form.button(t(lang, STR.back));
 
@@ -82,7 +83,7 @@ export function openLendMenu(player) {
     .body(t(lang, STR.loanBalanceBody, acc.emeralds));
 
   candidates.forEach((c) => {
-    const line = t(lang, STR.loanCandidateLine, c.name, c.amount, c.weeks, Math.round(c.rate * 100), Math.round(c.repayProbability * 100));
+    const line = t(lang, STR.loanCandidateLine, c.name, c.amount, c.weeks, (c.rate * 100).toFixed(2), Math.round(c.repayProbability * 100));
     form.button(line);
   });
   form.button(t(lang, STR.back));

@@ -3,7 +3,7 @@ import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { getAccount } from "../economy/bank.js";
 import { getCreditInfo } from "../economy/credit.js";
-import { INSURANCE_TYPES, getActiveInsurance, subscribeInsurance, cancelInsurance } from "../economy/insurance.js";
+import { INSURANCE_TYPES, getPremium, getActiveInsurance, subscribeInsurance, cancelInsurance } from "../economy/insurance.js";
 
 // ==========================================
 // 保険メニュー UI / Insurance Menu
@@ -28,7 +28,7 @@ export function openInsuranceMenu(player) {
   const keys = Object.keys(INSURANCE_TYPES);
   keys.forEach((key) => {
     const type = INSURANCE_TYPES[key];
-    form.button(`${t(lang, type.name)}\n${t(lang, STR.insurancePremiumPerWeek, type.premium)}`);
+    form.button(`${t(lang, type.name)}\n${t(lang, STR.insurancePremiumPerWeek, getPremium(type))}`);
   });
   if (active) form.button(t(lang, STR.insuranceBtnCancel));
   form.button(t(lang, STR.back));
@@ -54,7 +54,7 @@ function openInsuranceDetail(player, key) {
   const form = new ActionFormData()
     .title(t(lang, type.name))
     .body(
-      t(lang, STR.insuranceDetailBody, t(lang, type.desc), type.premium, t(lang, type.payout.name), type.payout.amount)
+      t(lang, STR.insuranceDetailBody, t(lang, type.desc), getPremium(type), t(lang, type.payout.name), type.payout.amount)
     )
     .button(t(lang, STR.insuranceBtnSubscribe))
     .button(t(lang, STR.back));

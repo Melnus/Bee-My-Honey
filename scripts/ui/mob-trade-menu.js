@@ -5,7 +5,7 @@ import { STR } from "../i18n/strings.js";
 import { CURRENCIES, CURRENCY_ICONS } from "../data/market-data.js";
 import { MOB_NAMES, MOB_TRADE_ITEMS, itemLocKey } from "../data/mob-trade-data.js";
 import { getCurrencyRate, getCurrentCycleDay, getWeekCurrencyRates, buildIconWaveChart } from "../economy/market-engine.js";
-import { getAccount } from "../economy/bank.js";
+import { getAccount, getItemCount, removeItem } from "../economy/bank.js";
 import { PB_ITEMS, PB_MOOD_MAX } from "../data/pb-data.js";
 import { hasQualification } from "../economy/labor.js";
 import { openFreshMarket } from "./fresh-market-menu.js";
@@ -51,12 +51,9 @@ function pickDailyItems(currKey, mode, count = 5) {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
-function findItemSlot(container, typeId) {
-  for (let i = 0; i < container.size; i++) {
-    const stack = container.getItem(i);
-    if (stack && stack.typeId === typeId) return i;
-  }
-  return -1;
+// 1口(lot個)の表示用。lotが1なら空文字(従来どおり品名だけ)
+function lotText(lang, item) {
+  return (item.lot ?? 1) > 1 ? t(lang, STR.mobTradeLotSuffix, item.lot) : "";
 }
 
 // 交易窓口トップ画面
@@ -112,7 +109,7 @@ export function openMobBuyList(player, currKey) {
     form.button({
       rawtext: [
         { translate: itemLocKey(item) },
-        { text: t(lang, STR.mobTradeItemLine, item.value, curName) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeItemLine, item.value, curName) }
       ]
     });
   }
@@ -134,13 +131,13 @@ export function confirmMobBuy(player, currKey, item) {
   }
 
   // ベルボート方式：インベントリへ直接付与せず、足元にドロップする
-  player.dimension.spawnItem(new ItemStack(item.id, 1), player.location);
+  player.dimension.spawnItem(new ItemStack(item.id, item.lot ?? 1), player.location);
   player.setDynamicProperty(`acc_curr_${currKey}`, acc[currKey] - item.value);
   player.sendMessage({
     rawtext: [
       { text: t(lang, STR.mobTradeBuySuccessPrefix) },
       { translate: itemLocKey(item) },
-      { text: t(lang, STR.mobTradeBuySuccessSuffix) }
+      { text: lotText(lang, item) + t(lang, STR.mobTradeBuySuccessSuffix) }
     ]
   });
   openMobBuyList(player, currKey);
@@ -162,7 +159,7 @@ export function openMobSellList(player, currKey) {
     form.button({
       rawtext: [
         { translate: itemLocKey(item) },
-        { text: t(lang, STR.mobTradeSellItemLine, price, curName) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeSellItemLine, price, curName) }
       ]
     });
   }
@@ -176,28 +173,20 @@ export function openMobSellList(player, currKey) {
 
 export function confirmMobSell(player, currKey, item) {
   const lang = getLang(player);
-  const inv = player.getComponent("inventory")?.container;
-  if (!inv) return openMobSellList(player, currKey);
+  const lot = item.lot ?? 1;
 
-  const slot = findItemSlot(inv, item.id);
-  if (slot === -1) {
+  // 買取は1口(lot個)単位。lot個そろっていなければ受け付けない
+  if (getItemCount(player, item.id) < lot) {
     player.sendMessage({
       rawtext: [
         { text: t(lang, STR.mobTradeNoItemPrefix) },
         { translate: itemLocKey(item) },
-        { text: t(lang, STR.mobTradeNoItemSuffix) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeNoItemSuffix) }
       ]
     });
     return openMobSellList(player, currKey);
   }
-
-  const stack = inv.getItem(slot);
-  if (stack.amount > 1) {
-    stack.amount -= 1;
-    inv.setItem(slot, stack);
-  } else {
-    inv.setItem(slot, undefined);
-  }
+  removeItem(player, item.id, lot);
 
   const price = Math.max(1, Math.ceil(item.value * 0.6));
   const acc = getAccount(player);
@@ -206,7 +195,7 @@ export function confirmMobSell(player, currKey, item) {
     rawtext: [
       { text: t(lang, STR.mobTradeSellSuccessPrefix) },
       { translate: itemLocKey(item) },
-      { text: t(lang, STR.mobTradeSellSuccessSuffix, price, t(lang, CURRENCIES[currKey].name)) }
+      { text: lotText(lang, item) + t(lang, STR.mobTradeSellSuccessSuffix, price, t(lang, CURRENCIES[currKey].name)) }
     ]
   });
   openMobSellList(player, currKey);
@@ -290,7 +279,7 @@ export function openPbShop(player, currKey) {
     const line = stock <= 0 ? t(lang, STR.pbItemSoldOutLine)
       : item.license && !hasQualification(player, item.license) ? t(lang, STR.pbItemLicenseLine, price, curName)
       : t(lang, STR.pbItemLine, price, curName, stock);
-    form.button({ rawtext: [{ translate: itemLocKey({ id: item.id, key: item.locKey }) }, { text: line }] });
+    form.button({ rawtext: [{ translate: itemLocKey({ id: item.id, key: item.locKey }) }, { text: lotText(lang, item) + line }] });
   }
   form.button(t(lang, STR.pbSellBtn));
   form.button(t(lang, STR.pbPetBtn));
@@ -321,7 +310,7 @@ function executePbBuy(player, currKey, item) {
       rawtext: [
         { text: t(lang, STR.mobTradeBuySuccessPrefix) },
         { translate: itemLocKey({ id: item.id, key: item.locKey }) },
-        { text: t(lang, STR.mobTradeBuySuccessSuffix) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeBuySuccessSuffix) }
       ]
     });
   }
@@ -339,7 +328,7 @@ function openPbSellList(player, currKey) {
     form.button({
       rawtext: [
         { translate: itemLocKey({ id: item.id, key: item.locKey }) },
-        { text: t(lang, STR.mobTradeSellItemLine, getPbSellPrice(item), curName) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeSellItemLine, getPbSellPrice(item), curName) }
       ]
     });
   }
@@ -359,7 +348,7 @@ function executePbSell(player, currKey, item) {
       rawtext: [
         { text: t(lang, STR.mobTradeNoItemPrefix) },
         { translate: itemLocKey({ id: item.id, key: item.locKey }) },
-        { text: t(lang, STR.mobTradeNoItemSuffix) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeNoItemSuffix) }
       ]
     });
   } else {
@@ -367,7 +356,7 @@ function executePbSell(player, currKey, item) {
       rawtext: [
         { text: t(lang, STR.mobTradeSellSuccessPrefix) },
         { translate: itemLocKey({ id: item.id, key: item.locKey }) },
-        { text: t(lang, STR.mobTradeSellSuccessSuffix, result.price, t(lang, CURRENCIES.apple.name)) }
+        { text: lotText(lang, item) + t(lang, STR.mobTradeSellSuccessSuffix, result.price, t(lang, CURRENCIES.apple.name)) }
       ]
     });
   }

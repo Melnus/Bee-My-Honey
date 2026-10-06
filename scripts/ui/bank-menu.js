@@ -1,8 +1,9 @@
+import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
-import { BANK_INTEREST_RATE, MAX_EMERALD_TX, getAccount, getItemCountWithBlocks, removeItemWithBlocks, giveItem } from "../economy/bank.js";
-import { QTY_STEP_DELTAS } from "./shared.js";
+import { getDepositRate, MAX_EMERALD_TX, getAccount, getItemCountWithBlocks, removeItemWithBlocks, giveItem } from "../economy/bank.js";
+import { promptQuantity } from "./shared.js";
 import { openTradingMenu } from "./trading-menu.js";
 import { openLoanMenu } from "./loan-menu.js";
 
@@ -19,7 +20,7 @@ export function openBankingMenu(player) {
 
   const form = new ActionFormData()
     .title(t(lang, STR.bankTitle))
-    .body(t(lang, STR.bankBody, acc.emeralds, invEmeralds, (BANK_INTEREST_RATE * 100).toFixed(1)))
+    .body(t(lang, STR.bankBody, acc.emeralds, invEmeralds, (getDepositRate() * 100).toFixed(2)))
     .button(t(lang, STR.bankDepositBtn))
     .button(t(lang, STR.bankWithdrawBtn))
     .button(t(lang, STR.bankLoanDeskBtn))
@@ -34,7 +35,7 @@ export function openBankingMenu(player) {
 }
 
 // 株の売買と同じ「数量を±で調整してから確定する」方式の預け入れ画面（文言は銀行のまま）
-export function openBankDepositModal(player, qty = 10) {
+export function openBankDepositModal(player, qty = null) {
   const lang = getLang(player);
   const invEmeralds = getItemCountWithBlocks(player, EMERALD_ID, EMERALD_BLOCK_ID);
 
@@ -43,27 +44,33 @@ export function openBankDepositModal(player, qty = 10) {
     return openBankingMenu(player);
   }
 
+  if (qty === null) {
+    return promptQuantity(player, {
+      title: t(lang, STR.bankDepositModalTitle),
+      max: invEmeralds,
+      onSubmit: (q) => openBankDepositModal(player, q),
+      onBack: () => openBankingMenu(player)
+    });
+  }
   qty = Math.max(1, Math.min(qty, invEmeralds));
 
   const form = new ActionFormData()
     .title(t(lang, STR.bankDepositModalTitle))
     .body(t(lang, STR.bankDepositStepBody, qty, invEmeralds))
-    .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
-    .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
     .button(t(lang, STR.bankConfirmDeposit))
+    .button(t(lang, STR.qtyEnter))
+    .button(t(lang, STR.qtyAll))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 7) return openBankingMenu(player);
-    if (res.selection <= 5) {
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], invEmeralds));
-      return openBankDepositModal(player, newQty);
-    }
+    if (res.canceled || res.selection === 3) return openBankingMenu(player);
+    if (res.selection === 1) return openBankDepositModal(player, null);
+    if (res.selection === 2) return openBankDepositModal(player, invEmeralds);
     const invNow = getItemCountWithBlocks(player, EMERALD_ID, EMERALD_BLOCK_ID);
     const acc = getAccount(player);
     if (invNow >= qty) {
       removeItemWithBlocks(player, EMERALD_ID, EMERALD_BLOCK_ID, qty);
-      player.setDynamicProperty("acc_emeralds", acc.emeralds + qty);
+      creditEmeralds(player, qty, FLOW.DEPOSIT);
       player.sendMessage(t(lang, STR.bankDepositMsg, qty));
     } else {
       player.sendMessage(t(lang, STR.bankInvShortage));
@@ -73,7 +80,7 @@ export function openBankDepositModal(player, qty = 10) {
 }
 
 // 株の売買と同じ「数量を±で調整してから確定する」方式の引き出し画面（文言は銀行のまま）
-export function openBankWithdrawModal(player, qty = 10) {
+export function openBankWithdrawModal(player, qty = null) {
   const lang = getLang(player);
   const acc = getAccount(player);
 
@@ -83,26 +90,31 @@ export function openBankWithdrawModal(player, qty = 10) {
   }
 
   const withdrawCap = Math.min(acc.emeralds, MAX_EMERALD_TX);
+  if (qty === null) {
+    return promptQuantity(player, {
+      title: t(lang, STR.bankWithdrawModalTitle),
+      max: withdrawCap,
+      onSubmit: (q) => openBankWithdrawModal(player, q),
+      onBack: () => openBankingMenu(player)
+    });
+  }
   qty = Math.max(1, Math.min(qty, withdrawCap));
 
   const form = new ActionFormData()
     .title(t(lang, STR.bankWithdrawModalTitle))
     .body(t(lang, STR.bankWithdrawStepBody, qty, acc.emeralds))
-    .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
-    .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
     .button(t(lang, STR.bankConfirmWithdraw))
+    .button(t(lang, STR.qtyEnter))
+    .button(t(lang, STR.qtyAll))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 7) return openBankingMenu(player);
-    if (res.selection <= 5) {
-      const cap = Math.min(acc.emeralds, MAX_EMERALD_TX);
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], cap));
-      return openBankWithdrawModal(player, newQty);
-    }
+    if (res.canceled || res.selection === 3) return openBankingMenu(player);
+    if (res.selection === 1) return openBankWithdrawModal(player, null);
+    if (res.selection === 2) return openBankWithdrawModal(player, withdrawCap);
     const accNow = getAccount(player);
     if (accNow.emeralds >= qty) {
-      player.setDynamicProperty("acc_emeralds", accNow.emeralds - qty);
+      debitEmeralds(player, qty, FLOW.WITHDRAW);
       giveItem(player, EMERALD_ID, qty);
       player.sendMessage(t(lang, STR.bankWithdrawMsg, qty));
     } else {

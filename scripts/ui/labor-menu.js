@@ -1,3 +1,5 @@
+import { getPriceLevel } from "../economy/price-level.js";
+import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
 import { world } from "@minecraft/server";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
@@ -233,7 +235,7 @@ export function openConsultantMenu(player, lecternLocation) {
     .title(t(lang, STR.laborConsultantTitle))
     .body(t(lang, STR.laborConsultantChooseBody));
   for (const c of CONSULTANT_CONTRACTS) {
-    form.button(t(lang, STR.laborContractOptionBtn, t(lang, c.name), c.marginMin, c.marginMax));
+    form.button(t(lang, STR.laborContractOptionBtn, t(lang, c.name), Math.round(c.marginMin * getPriceLevel()), Math.round(c.marginMax * getPriceLevel())));
   }
   form.button(t(lang, STR.back));
 
@@ -276,7 +278,7 @@ export function openOwnersClubMenu(player, lecternLocation) {
         );
       } else {
         const acc = getAccount(player);
-        player.setDynamicProperty("acc_emeralds", acc.emeralds + result.grantEmeralds);
+        creditEmeralds(player, result.grantEmeralds, FLOW.HIRE_BONUS);
         player.sendMessage(
           t(
             lang,
@@ -313,7 +315,7 @@ function openEmployeeListMenu(player, lecternLocation) {
       e.status === "dispatched"
         ? t(lang, STR.laborDispatchedLabel, Math.max(0, (e.dispatchEndDay ?? 0) - world.getDay()))
         : t(lang, STR.laborIdleLabel);
-    form.button(t(lang, STR.laborEmployeeButtonLabel, e.identity.name, e.grade, e.level, statusLabel, e.wage));
+    form.button(t(lang, STR.laborEmployeeButtonLabel, e.identity.name, e.grade, e.level, statusLabel, Math.round(e.wage * getPriceLevel())));
   }
   form.button(t(lang, STR.back));
 
@@ -343,7 +345,7 @@ function openEmployeeDetail(player, employeeId, lecternLocation) {
           STR.laborEmployeeDetailBody,
           employee.grade,
           employee.level,
-          employee.wage,
+          Math.round(employee.wage * getPriceLevel()),
           employee.skills.join(t(lang, STR.listSeparator)) || t(lang, STR.laborNoSkills),
           gateText,
           employee.records.length
@@ -371,12 +373,12 @@ function openEmployeeDetail(player, employeeId, lecternLocation) {
   }
   const acc = getAccount(player);
   if (result.accident) {
-    player.setDynamicProperty("acc_emeralds", Math.max(0, acc.emeralds - result.compensation));
+    debitEmeralds(player, result.compensation, FLOW.LABOR_COMPENSATION, { clamp: true });
     player.sendMessage(
       t(lang, STR.laborAccidentMsg, employee.identity.name, result.compensation, stockOptionSuffix(lang, result.stockOptionsGranted))
     );
   } else {
-    player.setDynamicProperty("acc_emeralds", acc.emeralds + result.margin);
+    creditEmeralds(player, result.margin, FLOW.DISPATCH_MARGIN);
     player.sendMessage(
       t(
         lang,

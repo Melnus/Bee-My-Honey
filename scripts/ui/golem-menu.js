@@ -1,3 +1,4 @@
+import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
@@ -202,7 +203,8 @@ export function executeGolemBuy(player, key, qty) {
   }
 
   const price = getCommodityPrice(key);
-  const cost = Math.round(price * qty);
+  // 単価が1E未満の品(クォーツ・レッドストーン等)を1個だけ買うと四捨五入で0Eになり、タダで手に入ってしまうため、最低1E
+  const cost = Math.max(1, Math.round(price * qty));
   const acc = getAccount(player);
 
   if (acc.emeralds < cost) {
@@ -211,7 +213,7 @@ export function executeGolemBuy(player, key, qty) {
   }
 
   giveItem(player, c.itemId, qty);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds - cost);
+  debitEmeralds(player, cost, FLOW.COMMODITY_BUY);
   applyTrade("commodity", key, qty, c.volatility);
 
   player.sendMessage({
@@ -241,7 +243,7 @@ export function executeGolemSell(player, key, qty) {
   const price = getCommodityPrice(key);
   const gain = Math.round(price * qty);
   const acc = getAccount(player);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds + gain);
+  creditEmeralds(player, gain, FLOW.COMMODITY_SELL);
   applyTrade("commodity", key, -qty, c.volatility);
 
   player.sendMessage({

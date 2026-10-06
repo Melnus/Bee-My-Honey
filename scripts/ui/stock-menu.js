@@ -1,12 +1,13 @@
+import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { STOCKS, STOCK_ICONS } from "../data/market-data.js";
 import { getStockPrice, getCurrentCycleDay, getWeekStockPrices, buildSparkline, buildIconWaveChart, applyTrade } from "../economy/market-engine.js";
 import { getAccount } from "../economy/bank.js";
-import { DIVIDEND_THRESHOLD, getDividendEligibility, claimDividend } from "../economy/dividends.js";
-import { HRMHRM_STOCK_OPTION_THRESHOLD } from "../economy/labor.js";
-import { QTY_STEP_DELTAS } from "./shared.js";
+import { getDividendThreshold, getDividendEligibility, claimDividend } from "../economy/dividends.js";
+import { getHrmhrmStockOptionThreshold } from "../economy/labor.js";
+import { promptQuantity } from "./shared.js";
 import { openTradingMenu } from "./trading-menu.js";
 
 // ==========================================
@@ -54,7 +55,7 @@ export function openStockTradeDialog(player, stockKey) {
   let divLabel = isStockOption
     ? t(lang, STR.stockOptionDivLabel)
     : !divInfo.eligible
-    ? t(lang, STR.divBtnLocked, DIVIDEND_THRESHOLD)
+    ? t(lang, STR.divBtnLocked, getDividendThreshold())
     : divInfo.alreadyClaimedToday
     ? t(lang, STR.divBtnDoneToday)
     : t(lang, STR.divBtnReady);
@@ -76,7 +77,7 @@ export function openStockTradeDialog(player, stockKey) {
     else if (res.selection === 1) openStockSellModal(player, stockKey);
     else if (res.selection === 2) {
       if (isStockOption) {
-        player.sendMessage(t(lang, STR.stockOptionDivInfo, HRMHRM_STOCK_OPTION_THRESHOLD));
+        player.sendMessage(t(lang, STR.stockOptionDivInfo, getHrmhrmStockOptionThreshold()));
         return openStockTradeDialog(player, stockKey);
       }
       claimDividend(player, stockKey);
@@ -85,7 +86,7 @@ export function openStockTradeDialog(player, stockKey) {
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
-export function openStockBuyModal(player, stockKey, qty = 1) {
+export function openStockBuyModal(player, stockKey, qty = null) {
   const lang = getLang(player);
   const s = STOCKS[stockKey];
   const price = getStockPrice(stockKey);
@@ -97,23 +98,29 @@ export function openStockBuyModal(player, stockKey, qty = 1) {
     return openStockTradeDialog(player, stockKey);
   }
 
+  if (qty === null) {
+    return promptQuantity(player, {
+      title: t(lang, STR.stockBuyModalTitle, t(lang, s.name)),
+      max: maxShares,
+      onSubmit: (q) => openStockBuyModal(player, stockKey, q),
+      onBack: () => openStockTradeDialog(player, stockKey)
+    });
+  }
   qty = Math.max(1, Math.min(qty, maxShares));
   const cost = price * qty;
 
   const form = new ActionFormData()
     .title(t(lang, STR.stockBuyModalTitle, t(lang, s.name)))
     .body(t(lang, STR.qtyStepBuyBody, t(lang, s.name), qty, price, cost, maxShares, acc.emeralds))
-    .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
-    .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
     .button(t(lang, STR.qtyConfirmBuy))
+    .button(t(lang, STR.qtyEnter))
+    .button(t(lang, STR.qtyAll))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 7) return openStockTradeDialog(player, stockKey);
-    if (res.selection <= 5) {
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], maxShares));
-      return openStockBuyModal(player, stockKey, newQty);
-    }
+    if (res.canceled || res.selection === 3) return openStockTradeDialog(player, stockKey);
+    if (res.selection === 1) return openStockBuyModal(player, stockKey, null);
+    if (res.selection === 2) return openStockBuyModal(player, stockKey, maxShares);
     const accNow = getAccount(player);
     const holdsNow = player.getDynamicProperty(`acc_stock_${stockKey}`) ?? 0;
     const finalCost = price * qty;
@@ -121,7 +128,7 @@ export function openStockBuyModal(player, stockKey, qty = 1) {
     if (accNow.emeralds >= finalCost) {
       const prevBought = player.getDynamicProperty(`acc_stock_bought_${stockKey}`) ?? price;
       const newAvgBought = holdsNow > 0 ? (prevBought * holdsNow + price * qty) / (holdsNow + qty) : price;
-      player.setDynamicProperty("acc_emeralds", accNow.emeralds - finalCost);
+      debitEmeralds(player, finalCost, FLOW.STOCK_BUY);
       player.setDynamicProperty(`acc_stock_${stockKey}`, holdsNow + qty);
       player.setDynamicProperty(`acc_stock_bought_${stockKey}`, Math.round(newAvgBought));
       applyTrade("stock", stockKey, qty, s.vol);
@@ -133,7 +140,7 @@ export function openStockBuyModal(player, stockKey, qty = 1) {
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
-export function openStockSellModal(player, stockKey, qty = 1) {
+export function openStockSellModal(player, stockKey, qty = null) {
   const lang = getLang(player);
   const s = STOCKS[stockKey];
   const price = getStockPrice(stockKey);
@@ -145,29 +152,35 @@ export function openStockSellModal(player, stockKey, qty = 1) {
     return openStockTradeDialog(player, stockKey);
   }
 
+  if (qty === null) {
+    return promptQuantity(player, {
+      title: t(lang, STR.stockSellModalTitle, t(lang, s.name)),
+      max: holds,
+      onSubmit: (q) => openStockSellModal(player, stockKey, q),
+      onBack: () => openStockTradeDialog(player, stockKey)
+    });
+  }
   qty = Math.max(1, Math.min(qty, holds));
   const gain = price * qty;
 
   const form = new ActionFormData()
     .title(t(lang, STR.stockSellModalTitle, t(lang, s.name)))
     .body(t(lang, STR.qtyStepSellBody, t(lang, s.name), qty, price, gain, holds, holds))
-    .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
-    .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
     .button(t(lang, STR.qtyConfirmSell))
+    .button(t(lang, STR.qtyEnter))
+    .button(t(lang, STR.qtyAll))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 7) return openStockTradeDialog(player, stockKey);
-    if (res.selection <= 5) {
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], holds));
-      return openStockSellModal(player, stockKey, newQty);
-    }
+    if (res.canceled || res.selection === 3) return openStockTradeDialog(player, stockKey);
+    if (res.selection === 1) return openStockSellModal(player, stockKey, null);
+    if (res.selection === 2) return openStockSellModal(player, stockKey, holds);
     const acc = getAccount(player);
     const holdsNow = player.getDynamicProperty(`acc_stock_${stockKey}`) ?? 0;
     if (holdsNow >= qty) {
       const finalGain = price * qty;
       const pnl = (price - bought) * qty;
-      player.setDynamicProperty("acc_emeralds", acc.emeralds + finalGain);
+      creditEmeralds(player, finalGain, FLOW.STOCK_SELL);
       player.setDynamicProperty(`acc_stock_${stockKey}`, holdsNow - qty);
       applyTrade("stock", stockKey, -qty, s.vol);
       player.sendMessage(t(lang, STR.stockSellMsg, t(lang, s.name), qty, pnl));

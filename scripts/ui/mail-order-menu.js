@@ -7,7 +7,7 @@ import {
   hasCard, applyForCard, getAvailableCredit, purchaseItem, payCardBalance,
   restructureCard, settleCardDebt,
   getMailOrderCategories, getCatalogForCategory, getTodayBargainItems, getDailyAdCopy,
-  MAIL_SHIPPING_FEE, PRIME_STANDARD_WEEKLY_FEE, SKEIN_PRIME_PREMIUM_THRESHOLD,
+  getShippingFee, getPrimeStandardWeeklyFee, getPrimePremiumThreshold,
   hasMailOrderPrimeStandard, subscribeMailOrderPrime, unsubscribeMailOrderPrime,
   hasSkeinPrimePremium, isSkeinPrimePremiumEligible, toggleSkeinPrimePremium, getSkeinStockValue
 } from "../economy/mail-order.js";
@@ -70,7 +70,7 @@ function openCategoryList(player) {
 function openCatalog(player, catKey) {
   const lang = getLang(player);
   const acc = getAccount(player);
-  const fee = hasMailOrderPrimeStandard(player) ? 0 : MAIL_SHIPPING_FEE;
+  const fee = hasMailOrderPrimeStandard(player) ? 0 : getShippingFee();
   const items = getCatalogForCategory(catKey);
 
   const form = new ActionFormData()
@@ -136,7 +136,7 @@ function openPrimeMenu(player) {
 
   const form = new ActionFormData()
     .title(t(lang, STR.mailPrimeTitle))
-    .body(t(lang, STR.mailPrimeBody, PRIME_STANDARD_WEEKLY_FEE, sknValue, SKEIN_PRIME_PREMIUM_THRESHOLD, premiumActive, premiumEligible))
+    .body(t(lang, STR.mailPrimeBody, getPrimeStandardWeeklyFee(), sknValue, getPrimePremiumThreshold(), premiumActive, premiumEligible))
     .button(standardActive ? t(lang, STR.mailPrimeStandardUnsubBtn) : t(lang, STR.mailPrimeStandardSubBtn))
     .button(premiumActive ? t(lang, STR.mailPrimePremiumUnsubBtn) : t(lang, STR.mailPrimePremiumSubBtn))
     .button(t(lang, STR.back));

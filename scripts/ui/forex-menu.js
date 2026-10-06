@@ -1,10 +1,11 @@
+import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { CURRENCIES, CURRENCY_ICONS } from "../data/market-data.js";
 import { getCurrencyRate, getCurrentCycleDay, getWeekCurrencyRates, buildSparkline, buildIconWaveChart, applyTrade } from "../economy/market-engine.js";
 import { getAccount } from "../economy/bank.js";
-import { QTY_STEP_DELTAS } from "./shared.js";
+import { promptQuantity } from "./shared.js";
 import { openTradingMenu } from "./trading-menu.js";
 
 // ==========================================
@@ -65,7 +66,7 @@ export function openForexTradeDialog(player, currKey) {
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
-export function openForexBuyModal(player, currKey, qty = 1) {
+export function openForexBuyModal(player, currKey, qty = null) {
   const lang = getLang(player);
   const c = CURRENCIES[currKey];
   const rate = getCurrencyRate(currKey);
@@ -77,6 +78,14 @@ export function openForexBuyModal(player, currKey, qty = 1) {
     return openForexTradeDialog(player, currKey);
   }
 
+  if (qty === null) {
+    return promptQuantity(player, {
+      title: t(lang, STR.forexBuyModalTitle, t(lang, c.name)),
+      max: maxUnits,
+      onSubmit: (q) => openForexBuyModal(player, currKey, q),
+      onBack: () => openForexTradeDialog(player, currKey)
+    });
+  }
   qty = Math.max(1, Math.min(qty, maxUnits));
   const unitCost = Math.round(rate * 10) / 10;
   const cost = Math.round(rate * qty);
@@ -84,17 +93,15 @@ export function openForexBuyModal(player, currKey, qty = 1) {
   const form = new ActionFormData()
     .title(t(lang, STR.forexBuyModalTitle, t(lang, c.name)))
     .body(t(lang, STR.qtyStepBuyBody, t(lang, c.name), qty, unitCost, cost, maxUnits, acc.emeralds))
-    .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
-    .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
     .button(t(lang, STR.qtyConfirmBuy))
+    .button(t(lang, STR.qtyEnter))
+    .button(t(lang, STR.qtyAll))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 7) return openForexTradeDialog(player, currKey);
-    if (res.selection <= 5) {
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], maxUnits));
-      return openForexBuyModal(player, currKey, newQty);
-    }
+    if (res.canceled || res.selection === 3) return openForexTradeDialog(player, currKey);
+    if (res.selection === 1) return openForexBuyModal(player, currKey, null);
+    if (res.selection === 2) return openForexBuyModal(player, currKey, maxUnits);
     const accNow = getAccount(player);
     const holdNow = accNow[currKey];
     const finalCost = Math.round(rate * qty);
@@ -102,7 +109,7 @@ export function openForexBuyModal(player, currKey, qty = 1) {
     if (accNow.emeralds >= finalCost) {
       const prevRate = player.getDynamicProperty(`acc_rate_${currKey}`) ?? rate;
       const newAvgRate = holdNow > 0 ? (prevRate * holdNow + rate * qty) / (holdNow + qty) : rate;
-      player.setDynamicProperty("acc_emeralds", accNow.emeralds - finalCost);
+      debitEmeralds(player, finalCost, FLOW.FOREX_BUY);
       player.setDynamicProperty(`acc_curr_${currKey}`, holdNow + qty);
       player.setDynamicProperty(`acc_rate_${currKey}`, parseFloat(newAvgRate.toFixed(2)));
       applyTrade("currency", currKey, qty, c.volatility);
@@ -114,7 +121,7 @@ export function openForexBuyModal(player, currKey, qty = 1) {
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
-export function openForexSellModal(player, currKey, qty = 1) {
+export function openForexSellModal(player, currKey, qty = null) {
   const lang = getLang(player);
   const c = CURRENCIES[currKey];
   const rate = getCurrencyRate(currKey);
@@ -127,6 +134,14 @@ export function openForexSellModal(player, currKey, qty = 1) {
     return openForexTradeDialog(player, currKey);
   }
 
+  if (qty === null) {
+    return promptQuantity(player, {
+      title: t(lang, STR.forexSellModalTitle, t(lang, c.name)),
+      max: hold,
+      onSubmit: (q) => openForexSellModal(player, currKey, q),
+      onBack: () => openForexTradeDialog(player, currKey)
+    });
+  }
   qty = Math.max(1, Math.min(qty, hold));
   const unitCost = Math.round(rate * 10) / 10;
   const gain = Math.round(rate * qty);
@@ -134,23 +149,21 @@ export function openForexSellModal(player, currKey, qty = 1) {
   const form = new ActionFormData()
     .title(t(lang, STR.forexSellModalTitle, t(lang, c.name)))
     .body(t(lang, STR.qtyStepSellBody, t(lang, c.name), qty, unitCost, gain, hold, hold))
-    .button(t(lang, STR.qtyMinus100)).button(t(lang, STR.qtyMinus50)).button(t(lang, STR.qtyMinus10))
-    .button(t(lang, STR.qtyPlus10)).button(t(lang, STR.qtyPlus50)).button(t(lang, STR.qtyPlus100))
     .button(t(lang, STR.qtyConfirmSell))
+    .button(t(lang, STR.qtyEnter))
+    .button(t(lang, STR.qtyAll))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 7) return openForexTradeDialog(player, currKey);
-    if (res.selection <= 5) {
-      const newQty = Math.max(1, Math.min(qty + QTY_STEP_DELTAS[res.selection], hold));
-      return openForexSellModal(player, currKey, newQty);
-    }
+    if (res.canceled || res.selection === 3) return openForexTradeDialog(player, currKey);
+    if (res.selection === 1) return openForexSellModal(player, currKey, null);
+    if (res.selection === 2) return openForexSellModal(player, currKey, hold);
     const accNow = getAccount(player);
     const holdNow = accNow[currKey];
     if (holdNow >= qty) {
       const finalGain = Math.round(rate * qty);
       const pnl = Math.round((rate - buyRate) * qty);
-      player.setDynamicProperty("acc_emeralds", accNow.emeralds + finalGain);
+      creditEmeralds(player, finalGain, FLOW.FOREX_SELL);
       player.setDynamicProperty(`acc_curr_${currKey}`, holdNow - qty);
       applyTrade("currency", currKey, -qty, c.volatility);
       player.sendMessage(t(lang, STR.forexSellMsg, t(lang, c.name), qty, pnl));
