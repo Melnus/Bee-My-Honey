@@ -253,7 +253,7 @@ export const ENCHANTED_BOOK_COMMON_ITEMS = ENCHANTMENTS
       key: `book_${e.id}`,
       itemId: "minecraft:enchanted_book",
       giveAmount: 1,
-      price: 41000,
+      // price はここでは持たない。郵便販売の mail-order-data.js が統一プライシングエンジンで付ける
       name: {
         ja: `エンチャント本（${e.name.ja}${roman}）`,
         en: `Enchanted Book (${e.name.en}${roman})`

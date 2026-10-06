@@ -3,6 +3,29 @@
 // (HRMHRM Partners HLD)
 // ==========================================
 
+// ==========================================
+// 賃金の算定方法(2026-10-01 確定)
+// ------------------------------------------
+// 「村の最低賃金」を土台にして、HRMHRMの賃金はそこに実在の理屈(仲介マージン・環境コスト)
+// で少しだけ積む方式にした。マイクラには労働そのものに値段がついた基準が無いため、
+// 既存のオーナーズクラブ(村人派遣)の OWNER_BASE_WAGE_PER_DAY(グレードC基準・1日20E)を
+// 「村での1日の労働価値」の既存基準として流用し、スタッフサービス(資格なしプレイヤー)は
+// その半分(10E=手間賃)を労働そのものの対価とする。
+//
+//   村の最低賃金 = max(納品物を村人の床値で売った場合の粗利 − LABOR_COST_PER_DAY, 0)
+//                  + 手間賃(OWNER_BASE_WAGE_PER_DAY × 0.5 = 10E)
+//                  + (該当する場合のみ)危険手当: 装備消耗の実費
+//
+// 村人の床値(新米レベル、同一素材で複数レートがあれば一番良い方)は
+// dev/sketch/village-baseline.md を参照。算出結果:
+//   採掘(丸石48個×0.05E − 2E食費宿代 = 0.4E) + 手間賃10E = 10.4E
+//   護衛(腐った肉9個の粗利は赤字のため0) + 手間賃10E + 危険手当4E(革防具一式の原価) = 14E
+//   農家の手伝い(小麦12個×0.05E − 2E = 赤字のため0) + 手間賃10E = 10E
+//   養蜂のバイト(ハニカムは村人が買い取らず床値なし) + 手間賃10E = 10E
+//
+// HRMHRMの賃金(wageMin)はこの村の最低賃金そのもの、wageMaxは仲介マージンとして+20%。
+// ==========================================
+
 // ---- スタッフサービス：資格なし（オーバーワールド全般） ----
 export const UNQUALIFIED_JOBS = [
   {
@@ -11,8 +34,8 @@ export const UNQUALIFIED_JOBS = [
     itemId: "minecraft:wheat",
     countMin: 8,
     countMax: 16,
-    wageMin: 4,
-    wageMax: 10
+    wageMin: 10,
+    wageMax: 12
   },
   {
     key: "bee_part_time",
@@ -20,8 +43,8 @@ export const UNQUALIFIED_JOBS = [
     itemId: "minecraft:honeycomb",
     countMin: 4,
     countMax: 10,
-    wageMin: 4,
-    wageMax: 10
+    wageMin: 10,
+    wageMax: 12
   },
   {
     key: "mining",
@@ -29,7 +52,7 @@ export const UNQUALIFIED_JOBS = [
     itemId: "minecraft:cobblestone",
     countMin: 32,
     countMax: 64,
-    wageMin: 5,
+    wageMin: 10,
     wageMax: 12
   },
   {
@@ -38,28 +61,17 @@ export const UNQUALIFIED_JOBS = [
     itemId: "minecraft:rotten_flesh",
     countMin: 6,
     countMax: 12,
-    wageMin: 6,
-    wageMax: 14
+    wageMin: 14,
+    wageMax: 17
   }
 ];
 
-// ---- スタッフサービス：資格あり（ネザー／水中／エンド） ----
+// ---- スタッフサービス：資格あり（水中／ネザー／エンド） ----
+// 村人の床値が存在しない(誰も買い取らない)環境なので、資格なし賃金の平均(約11E)を土台に、
+// 環境の厳しさに応じた段階的な倍率(現実の危険手当・僻地手当の相場感=1.2〜1.5倍の範囲)を掛けた。
+// まだオーバーワールド内の水中が一番軽く、ネザー、エンドの順に重くなる。
+// 将来ディメンションや特殊環境が増えたら、この並びに1段追加する想定。
 export const QUALIFIED_JOBS = {
-  nether: {
-    name: { ja: "ネザー", en: "Nether" },
-    minLicenseLevel: 1,
-    jobs: [
-      {
-        key: "nether_bridge",
-        name: { ja: "溶岩に渡す橋の建設", en: "Bridge Construction over Lava" },
-        itemId: "minecraft:blackstone",
-        countMin: 32,
-        countMax: 64,
-        wageMin: 150,
-        wageMax: 400
-      }
-    ]
-  },
   underwater: {
     name: { ja: "水中", en: "Underwater" },
     minLicenseLevel: 1,
@@ -70,8 +82,23 @@ export const QUALIFIED_JOBS = {
         itemId: "minecraft:prismarine_shard",
         countMin: 16,
         countMax: 32,
-        wageMin: 150,
-        wageMax: 400
+        wageMin: 14,
+        wageMax: 17
+      }
+    ]
+  },
+  nether: {
+    name: { ja: "ネザー", en: "Nether" },
+    minLicenseLevel: 1,
+    jobs: [
+      {
+        key: "nether_bridge",
+        name: { ja: "溶岩に渡す橋の建設", en: "Bridge Construction over Lava" },
+        itemId: "minecraft:blackstone",
+        countMin: 32,
+        countMax: 64,
+        wageMin: 18,
+        wageMax: 22
       }
     ]
   },
@@ -85,8 +112,8 @@ export const QUALIFIED_JOBS = {
         itemId: "minecraft:end_stone",
         countMin: 32,
         countMax: 64,
-        wageMin: 150,
-        wageMax: 400
+        wageMin: 22,
+        wageMax: 26
       }
     ]
   }

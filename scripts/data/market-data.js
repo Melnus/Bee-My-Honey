@@ -84,8 +84,7 @@ export const STOCKS = {
     base: 55,
     vol: 0.3,
     desc: { ja: "海の生物たちが運営する生命保険会社", en: "A life insurance company run by sea creatures" },
-    dividendType: "cash",
-    dividendRate: 0.05
+    dividendType: "cash" // 配当率は政策金利に連動(rates.js の getDividendRateDaily)
   },
   hrmhrm: {
     name: { ja: "HRMHRM Partners HLD (HRM)", en: "HRMHRM Partners HLD (HRM)" },
@@ -143,7 +142,7 @@ export const COMMODITIES = {
     itemId: "minecraft:diamond",
     blockId: "minecraft:diamond_block",
     key: "item.diamond.name",
-    baseRate: 12,
+    baseRate: 1.5,
     volatility: 0.3,
     desc: { ja: "希少な現物資産・値動き中程度", en: "Rare physical asset, moderate swings" }
   },
@@ -152,7 +151,7 @@ export const COMMODITIES = {
     itemId: "minecraft:gold_ingot",
     blockId: "minecraft:gold_block",
     key: "item.gold_ingot.name",
-    baseRate: 5,
+    baseRate: 0.532,
     volatility: 0.15,
     desc: { ja: "伝統的な安定資産", en: "Traditional stable asset" }
   },
@@ -161,7 +160,7 @@ export const COMMODITIES = {
     itemId: "minecraft:lapis_lazuli",
     blockId: "minecraft:lapis_block",
     key: "item.dye.blue.name",
-    baseRate: 1.5,
+    baseRate: 0.375,
     volatility: 0.5,
     desc: { ja: "小口で値動きはやや荒め", en: "Small denomination, choppier moves" }
   },
@@ -173,7 +172,7 @@ export const COMMODITIES = {
     itemId: "minecraft:cobblestone",
     blockId: "minecraft:cobblestone",
     key: "item.cobblestone.name",
-    baseRate: 0.05,
+    baseRate: 0.188,
     volatility: 0.1,
     bulkOnly: true,
     desc: { ja: "供給過多になりやすい建材、値動きは穏やか", en: "Abundant building material, low volatility" }
@@ -183,7 +182,7 @@ export const COMMODITIES = {
     itemId: "minecraft:iron_ingot",
     blockId: "minecraft:iron_block",
     key: "item.iron_ingot.name",
-    baseRate: 1.5,
+    baseRate: 0.407,
     volatility: 0.2,
     bulkOnly: true,
     desc: { ja: "汎用資材、比較的安定", en: "General-purpose material, fairly stable" }
@@ -193,7 +192,7 @@ export const COMMODITIES = {
     itemId: "minecraft:copper_ingot",
     blockId: "minecraft:copper_block",
     key: "item.copper_ingot.name",
-    baseRate: 0.8,
+    baseRate: 0.282,
     volatility: 0.25,
     bulkOnly: true,
     desc: { ja: "近年需要が伸びている資材", en: "Rising-demand material" }
@@ -203,7 +202,7 @@ export const COMMODITIES = {
     itemId: "minecraft:glass",
     blockId: "minecraft:glass",
     key: "item.glass.name",
-    baseRate: 0.1,
+    baseRate: 0.236,
     volatility: 0.1,
     bulkOnly: true,
     desc: { ja: "建材、値動きは穏やか", en: "Building material, low volatility" }
@@ -213,7 +212,7 @@ export const COMMODITIES = {
     itemId: "minecraft:quartz",
     blockId: "minecraft:quartz_block",
     key: "item.quartz.name",
-    baseRate: 1.2,
+    baseRate: 0.25,
     volatility: 0.3,
     desc: { ja: "ネザー産、やや値動きが荒い", en: "Nether-sourced, choppier moves" }
   },
@@ -222,7 +221,7 @@ export const COMMODITIES = {
     itemId: "minecraft:redstone",
     blockId: "minecraft:redstone_block",
     key: "item.redstone.name",
-    baseRate: 1.0,
+    baseRate: 0.25,
     volatility: 0.3,
     desc: { ja: "機構向け需要で値動きが荒め", en: "Demand from redstone builds, choppier moves" }
   },
@@ -234,7 +233,7 @@ export const COMMODITIES = {
     itemId: "minecraft:spruce_log",
     blockId: null,
     key: "item.spruceLog.name",
-    baseRate: 0.3,
+    baseRate: 0.188,
     volatility: 0.15,
     bulkOnly: true,
     desc: { ja: "建材需要が中心、値動きは穏やか", en: "Mostly building demand, low volatility" }
@@ -244,7 +243,7 @@ export const COMMODITIES = {
     itemId: "minecraft:oak_log",
     blockId: null,
     key: "item.oakLog.name",
-    baseRate: 0.3,
+    baseRate: 0.188,
     volatility: 0.1,
     bulkOnly: true,
     desc: { ja: "最も一般的な建材、値動きは穏やか", en: "Most common lumber, low volatility" }
@@ -254,7 +253,7 @@ export const COMMODITIES = {
     itemId: "minecraft:birch_log",
     blockId: null,
     key: "item.birchLog.name",
-    baseRate: 0.3,
+    baseRate: 0.188,
     volatility: 0.1,
     bulkOnly: true,
     desc: { ja: "内装用の需要が中心", en: "Mostly interior-finish demand" }
@@ -264,7 +263,7 @@ export const COMMODITIES = {
     itemId: "minecraft:jungle_log",
     blockId: null,
     key: "item.jungleLog.name",
-    baseRate: 0.35,
+    baseRate: 0.188,
     volatility: 0.2,
     bulkOnly: true,
     desc: { ja: "供給地が偏るためやや値動きが荒い", en: "Choppier due to limited source biomes" }
@@ -274,7 +273,7 @@ export const COMMODITIES = {
     itemId: "minecraft:acacia_log",
     blockId: null,
     key: "item.acaciaLog.name",
-    baseRate: 0.35,
+    baseRate: 0.188,
     volatility: 0.2,
     bulkOnly: true,
     desc: { ja: "供給地が偏るためやや値動きが荒い", en: "Choppier due to limited source biomes" }
@@ -284,7 +283,7 @@ export const COMMODITIES = {
     itemId: "minecraft:dark_oak_log",
     blockId: null,
     key: "item.darkOakLog.name",
-    baseRate: 0.35,
+    baseRate: 0.188,
     volatility: 0.15,
     bulkOnly: true,
     desc: { ja: "内装用の需要が中心", en: "Mostly interior-finish demand" }
@@ -294,7 +293,7 @@ export const COMMODITIES = {
     itemId: "minecraft:cherry_log",
     blockId: null,
     key: "item.cherryLog.name",
-    baseRate: 0.5,
+    baseRate: 0.188,
     volatility: 0.3,
     bulkOnly: true,
     desc: { ja: "希少で装飾需要が高く値動きが荒い", en: "Scarce, decorative demand, choppy moves" }
@@ -304,7 +303,7 @@ export const COMMODITIES = {
     itemId: "minecraft:mangrove_log",
     blockId: null,
     key: "item.mangroveLog.name",
-    baseRate: 0.45,
+    baseRate: 0.188,
     volatility: 0.25,
     bulkOnly: true,
     desc: { ja: "供給地が偏るためやや値動きが荒い", en: "Choppier due to limited source biomes" }
@@ -315,7 +314,7 @@ export const COMMODITIES = {
     itemId: "minecraft:dirt",
     blockId: null,
     key: "item.dirt.name",
-    baseRate: 0.02,
+    baseRate: 0.188,
     volatility: 0.05,
     bulkOnly: true,
     desc: { ja: "無尽蔵に近い、最も安価な建材", en: "Near-infinite supply, the cheapest fill material" }
@@ -325,7 +324,7 @@ export const COMMODITIES = {
     itemId: "minecraft:sand",
     blockId: null,
     key: "item.sand.name",
-    baseRate: 0.03,
+    baseRate: 0.188,
     volatility: 0.05,
     bulkOnly: true,
     desc: { ja: "ガラス生産等の需要が下支え", en: "Underpinned by glass-making demand" }
@@ -335,7 +334,7 @@ export const COMMODITIES = {
     itemId: "minecraft:gravel",
     blockId: null,
     key: "item.gravel.name",
-    baseRate: 0.03,
+    baseRate: 0.188,
     volatility: 0.05,
     bulkOnly: true,
     desc: { ja: "無尽蔵に近い、値動きは穏やか", en: "Near-infinite supply, low volatility" }
@@ -345,7 +344,7 @@ export const COMMODITIES = {
     itemId: "minecraft:clay_ball",
     blockId: "minecraft:clay",
     key: "item.clay.name",
-    baseRate: 0.08,
+    baseRate: 0.188,
     volatility: 0.1,
     bulkOnly: true,
     desc: { ja: "陶器・レンガ需要が中心", en: "Mostly pottery and brick demand" }
