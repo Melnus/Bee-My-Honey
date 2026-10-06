@@ -72,6 +72,18 @@ export const STR = {
   qtyPlus10: { ja: "§a+10", en: "§a+10" },
   qtyPlus50: { ja: "§a+50", en: "§a+50" },
   qtyPlus100: { ja: "§a+100", en: "§a+100" },
+  // 数量の入力欄(統一の数量入力。旧: ±10/50/100の段階ボタン)
+  // 既存ワールドの金額換算(migration.js)
+  migrationDone: {
+    ja: (factor) => `§e[経済更新] 価格の基準が変わったため、あなたの口座・借入・カード・先物などの金額を ×${factor} に換算しました(労働日数に換算した資産の大きさは変わりません)。`,
+    en: (factor) => `§e[Economy update] Prices were re-based, so your balance, loans, card and futures amounts were converted by x${factor} (your wealth measured in days of labor is unchanged).`
+  },
+  qtyFieldLabel: { ja: (max) => `数量(半角の数字・最大 ${max})`, en: (max) => `Quantity (digits only, max ${max})` },
+  qtyFieldHint: { ja: "例: 250", en: "e.g. 250" },
+  qtyAllToggle: { ja: (max) => `全額(最大 ${max} をすべて)`, en: (max) => `All (the maximum, ${max})` },
+  qtyInvalid: { ja: (max) => `§c数量は 1〜${max} の整数で入力してください。`, en: (max) => `§cEnter a whole number from 1 to ${max}.` },
+  qtyEnter: { ja: "数量を入力し直す", en: "Change quantity" },
+  qtyAll: { ja: "全額(最大)にする", en: "Use maximum" },
   qtyConfirmBuy: { ja: "この数量で購入する", en: "Confirm Purchase" },
   qtyConfirmSell: { ja: "この数量で売却する", en: "Confirm Sale" },
   qtyStepBuyBody: {
@@ -302,6 +314,8 @@ export const STR = {
   mobTradeYourBalance: { ja: (n, cur) => `現在の所持: ${n} ${cur}`, en: (n, cur) => `Current balance: ${n} ${cur}` },
   mobTradeItemLine: { ja: (price, cur) => `\n${price} ${cur}`, en: (price, cur) => `\n${price} ${cur}` },
   mobTradeSellItemLine: { ja: (price, cur) => `\n+${price} ${cur}`, en: (price, cur) => `\n+${price} ${cur}` },
+  // 1口が複数個の品(統一プライシングのロット)の個数表示。品名の直後に付ける。lot=1の時は呼び出し側で空にする
+  mobTradeLotSuffix: { ja: (n) => ` ×${n}`, en: (n) => ` x${n}` },
 
   mobTradeInsufficientCurrency: { ja: "§c外貨が足りないようだ…", en: "§cNot enough currency…" },
   mobTradeBuySuccessPrefix: { ja: "§a", en: "§aYou received " },
