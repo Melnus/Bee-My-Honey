@@ -1,7 +1,6 @@
 import { world, ItemStack } from "@minecraft/server";
 import {
   PB_ITEMS,
-  PB_TARGET_STOCK,
   PB_SELL_RATIO,
   PB_PRICE_FACTOR_MIN,
   PB_PRICE_FACTOR_MAX,
@@ -12,7 +11,7 @@ import {
   PB_GIFT_FISH
 } from "../data/pb-data.js";
 import { getShopStock, addShopStock, removeShopStock, replenishShopStock } from "./trade-pool.js";
-import { getAccount } from "./bank.js";
+import { getAccount, getItemCount, removeItem } from "./bank.js";
 import { hasQualification } from "./labor.js";
 
 // ==========================================
@@ -52,7 +51,7 @@ export function ensurePbFresh() {
 
   if (world.getDynamicProperty(LAST_RESTOCK_KEY) !== today) {
     for (const item of PB_ITEMS) {
-      if (item.restock) replenishShopStock(poolId(item), PB_TARGET_STOCK);
+      if (item.restock) replenishShopStock(poolId(item), item.targetStock);
     }
     world.setDynamicProperty(LAST_RESTOCK_KEY, today);
   }
@@ -152,40 +151,24 @@ export function buyFromPb(player, item) {
   const acc = getAccount(player);
   if (acc.apple < price) return { ok: false, reason: "insufficientCurrency" };
 
-  const removed = removeShopStock(poolId(item), 1);
+  // 1回の購入は1口(lot個)。在庫もlot個ずつ減る
+  const removed = removeShopStock(poolId(item), item.lot);
   if (!removed.ok) return { ok: false, reason: "soldOut" };
 
   // ベルボート方式(動物交易と同じ): インベントリへ直接付与せず足元にドロップする
-  player.dimension.spawnItem(new ItemStack(item.id, 1), player.location);
+  player.dimension.spawnItem(new ItemStack(item.id, item.lot), player.location);
   player.setDynamicProperty("acc_curr_apple", acc.apple - price);
   return { ok: true, price };
 }
 
 export function sellToPb(player, item) {
-  const inv = player.getComponent("inventory")?.container;
-  if (!inv) return { ok: false, reason: "noItem" };
-
-  let slot = -1;
-  for (let i = 0; i < inv.size; i++) {
-    const stack = inv.getItem(i);
-    if (stack && stack.typeId === item.id) {
-      slot = i;
-      break;
-    }
-  }
-  if (slot === -1) return { ok: false, reason: "noItem" };
-
-  const stack = inv.getItem(slot);
-  if (stack.amount > 1) {
-    stack.amount -= 1;
-    inv.setItem(slot, stack);
-  } else {
-    inv.setItem(slot, undefined);
-  }
+  // 1回の納品は1口(lot個)。lot個そろっていなければ受け付けない
+  if (getItemCount(player, item.id) < item.lot) return { ok: false, reason: "noItem" };
+  removeItem(player, item.id, item.lot);
 
   const price = getPbSellPrice(item);
   const acc = getAccount(player);
   player.setDynamicProperty("acc_curr_apple", acc.apple + price);
-  addShopStock(poolId(item), 1);
+  addShopStock(poolId(item), item.lot);
   return { ok: true, price };
 }

@@ -1,3 +1,6 @@
+import { scaleEInt } from "./price-level.js";
+import { getLoanRate, getLenderRate, getRepayProbability } from "./rates.js";
+import { creditEmeralds, debitEmeralds, FLOW } from "./ledger.js";
 import { world } from "@minecraft/server";
 import { getAccount } from "./bank.js";
 import { adjustCredit, getCreditScore, recordOverdue, clearOverdue } from "./credit.js";
@@ -21,11 +24,9 @@ function requiredScore(difficulty) {
   return 380 + difficulty * 40; // 難易度1:420 〜 難易度5:580
 }
 
-// 難易度・スコアから週利(%)を算出。スコアが高いほど優遇。
+// 難易度・スコアから週利を算出(rates.js。政策金利+上乗せ。スコアが高いほど優遇)。
 function weeklyInterestRate(difficulty, score) {
-  const base = 0.03 + difficulty * 0.01; // 4%〜8%
-  const discount = Math.max(0, (score - 600) / 100) * 0.01;
-  return Math.max(0.02, base - discount);
+  return getLoanRate(difficulty, score);
 }
 
 // 難易度に応じた返済期間(週)
@@ -53,18 +54,19 @@ export function applyForLoan(player, tierIndex) {
 
   const rate = weeklyInterestRate(tier.difficulty, score);
   const weeks = termWeeks(tier.difficulty);
-  const totalDue = Math.round(tier.amount * (1 + rate * weeks));
+  const amount = scaleEInt(tier.amount); // 契約時の名目額(ベース×掛率)で確定。後からインフレしても借入額は変わらない
+  const totalDue = Math.round(amount * (1 + rate * weeks));
   const weeklyPayment = Math.ceil(totalDue / weeks);
 
   const acc = getAccount(player);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds + tier.amount);
+  creditEmeralds(player, amount, FLOW.LOAN_DISBURSED);
   player.setDynamicProperty("cr_loan_balance", totalDue);
   player.setDynamicProperty("cr_loan_weekly_payment", weeklyPayment);
   player.setDynamicProperty("cr_loan_weeks_left", weeks);
   player.setDynamicProperty("cr_loan_count", (player.getDynamicProperty("cr_loan_count") ?? 0) + 1);
   clearOverdue(player);
 
-  return { approved: true, amount: tier.amount, rate, weeks, weeklyPayment, totalDue };
+  return { approved: true, amount, rate, weeks, weeklyPayment, totalDue };
 }
 
 // 週次の自動引き落とし。すべてのオンラインプレイヤーに対して呼ぶ。
@@ -91,7 +93,7 @@ export function applyLoanBilling() {
     const pay = Math.min(payment, balance);
 
     if (acc.emeralds >= pay) {
-      player.setDynamicProperty("acc_emeralds", acc.emeralds - pay);
+      debitEmeralds(player, pay, FLOW.LOAN_REPAID);
       const newBalance = balance - pay;
       const weeksLeft = Math.max(0, (player.getDynamicProperty("cr_loan_weeks_left") ?? 1) - 1);
       player.setDynamicProperty("cr_loan_balance", newBalance);
@@ -146,12 +148,12 @@ export function generateBorrowerCandidates() {
     const tier = LOAN_TIERS[Math.floor(Math.random() * LOAN_TIERS.length)];
     const score = 350 + Math.floor(Math.random() * 450); // 350〜800のランダム信用力
     const weeks = termWeeks(tier.difficulty);
-    const rate = weeklyInterestRate(tier.difficulty, score);
-    // スコアが高いほど返済確率が上がる（0.4〜0.97の範囲）
-    const repayProbability = Math.min(0.97, Math.max(0.4, (score - 300) / 550));
+    // スコアが高いほど返済確率が上がる(0.80〜0.99)。貸し手の金利は、貸し倒れの見込みを織り込んで決まる(rates.js)
+    const repayProbability = getRepayProbability(score);
+    const rate = getLenderRate(repayProbability, weeks);
     candidates.push({
       name: BORROWER_NAMES_JA[i],
-      amount: tier.amount,
+      amount: scaleEInt(tier.amount),
       weeks,
       rate,
       score,
@@ -170,7 +172,7 @@ export function lendToBorrower(player, candidate) {
   if (acc.emeralds < candidate.amount) return { ok: false, reason: "insufficient_funds" };
   if (hasActiveLending(player)) return { ok: false, reason: "already_lending" };
 
-  player.setDynamicProperty("acc_emeralds", acc.emeralds - candidate.amount);
+  debitEmeralds(player, candidate.amount, FLOW.LEND_OUT);
   player.setDynamicProperty("loan_lent_active", 1);
   player.setDynamicProperty("loan_lent_amount", candidate.amount);
   player.setDynamicProperty("loan_lent_weeks_left", candidate.weeks);
@@ -206,13 +208,13 @@ export function resolveLending(player) {
   const acc = getAccount(player);
   let result;
   if (success) {
-    const totalReturn = Math.round(amount * (1 + rate * weeks * 4)); // 簡易利息還元
-    player.setDynamicProperty("acc_emeralds", acc.emeralds + totalReturn);
+    const totalReturn = Math.round(amount * (1 + rate * weeks)); // 契約時の週利 × 期間の単純利息
+    creditEmeralds(player, totalReturn, FLOW.LEND_RETURN);
     result = { success: true, amount, totalReturn };
   } else {
     // デフォルト: 元本の一部(30%)のみ回収
     const partial = Math.round(amount * 0.3);
-    player.setDynamicProperty("acc_emeralds", acc.emeralds + partial);
+    creditEmeralds(player, partial, FLOW.LEND_RETURN);
     result = { success: false, amount, partial };
   }
 

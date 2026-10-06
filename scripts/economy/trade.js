@@ -1,3 +1,4 @@
+import { creditEmeralds, debitEmeralds, FLOW } from "./ledger.js";
 import { ItemStack } from "@minecraft/server";
 import { COMMODITIES, SHULKER_UNIT_QTY, BLOCK_UNIT_SIZE } from "../data/market-data.js";
 import { getGenreTag } from "../data/tag-dictionary.js";
@@ -166,7 +167,7 @@ export function buyBulkCommodity(player, commodityKey, originLocation) {
   if (acc.emeralds < totalAmount) return { ok: false, reason: "insufficientFunds", totalAmount };
 
   fillShulkerWithItem(target.container, def.itemId, SHULKER_UNIT_QTY);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds - totalAmount);
+  debitEmeralds(player, totalAmount, FLOW.BULK_BUY);
   applyTrade("commodity_bulk", commodityKey, SHULKER_DEMAND_UNITS, def.volatility);
 
   return { ok: true, side: "buy", commodityKey, unitPrice, totalAmount, qty: SHULKER_UNIT_QTY };
@@ -194,7 +195,7 @@ export function sellBulkCommodity(player, commodityKey, originLocation) {
 
   emptyShulker(target.container);
   const acc = getAccount(player);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds + totalAmount);
+  creditEmeralds(player, totalAmount, FLOW.BULK_SELL);
   applyTrade("commodity_bulk", commodityKey, -SHULKER_DEMAND_UNITS, def.volatility);
 
   return { ok: true, side: "sell", commodityKey, unitPrice, totalAmount, qty: SHULKER_UNIT_QTY };

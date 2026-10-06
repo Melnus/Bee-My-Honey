@@ -1,3 +1,5 @@
+import { getPriceLevel, scaleEInt } from "./price-level.js";
+import { creditEmeralds, debitEmeralds, FLOW } from "./ledger.js";
 import { world } from "@minecraft/server";
 import {
   UNQUALIFIED_JOBS,
@@ -62,14 +64,15 @@ function currentGlobalDay() {
 // 自動付与される。通常の配当システム(毎日クレーム式)とは別の仕組み。
 // ==========================================
 const HRMHRM_STOCK_KEY = "hrmhrm";
-export const HRMHRM_STOCK_OPTION_THRESHOLD = 100; // 既存の配当しきい値(DIVIDEND_THRESHOLD)と同じ基準
+export const HRMHRM_STOCK_OPTION_THRESHOLD = 100; // 既存の配当しきい値(DIVIDEND_THRESHOLD)と同じ基準(ベース単位E)
+export const getHrmhrmStockOptionThreshold = () => scaleEInt(HRMHRM_STOCK_OPTION_THRESHOLD);
 const HRMHRM_STOCK_OPTION_AMOUNT = 1; // 1回の労働イベントごとに付与される株数
 
 function grantHrmhrmStockOptionIfEligible(player) {
   const price = getStockPrice(HRMHRM_STOCK_KEY);
   const holds = player.getDynamicProperty(`acc_stock_${HRMHRM_STOCK_KEY}`) ?? 0;
   const value = holds * price;
-  if (value < HRMHRM_STOCK_OPTION_THRESHOLD) return 0;
+  if (value < getHrmhrmStockOptionThreshold()) return 0;
   player.setDynamicProperty(`acc_stock_${HRMHRM_STOCK_KEY}`, holds + HRMHRM_STOCK_OPTION_AMOUNT);
   return HRMHRM_STOCK_OPTION_AMOUNT;
 }
@@ -169,6 +172,7 @@ export function registerNearbyVillagerAsEmployee(player, lecternLocation, radius
 
   const grade = pickWeighted(OWNER_GRADES);
   const level = 1 + Math.floor(Math.random() * 3); // Lv1〜3でスタート
+  // 村人の賃金はベース単位で保存する(支払い・表示の時に掛率を掛ける。インフレに追従するため)
   const wage = Math.round(OWNER_BASE_WAGE_PER_DAY * grade.wageMultiplier * (1 + (level - 1) * 0.2));
   const name = OWNER_NAME_POOL[Math.floor(Math.random() * OWNER_NAME_POOL.length)];
   const skillCount = 1 + Math.floor(Math.random() * 2);
@@ -209,7 +213,7 @@ export function registerNearbyVillagerAsEmployee(player, lecternLocation, radius
     // 既に無効な場合は無視
   }
 
-  return { ok: true, employee, grantEmeralds: OWNERS_CLUB_REGISTRATION_GRANT };
+  return { ok: true, employee, grantEmeralds: scaleEInt(OWNERS_CLUB_REGISTRATION_GRANT) };
 }
 
 export function dispatchEmployee(player, employeeId, days) {
@@ -252,15 +256,16 @@ export function collectDispatch(player, employeeId) {
   });
   saveEmployees(player, employees);
 
-  const laborCost = LABOR_COST_PER_DAY * days;
+  const laborCost = scaleEInt(LABOR_COST_PER_DAY) * days;
+  const wageNow = Math.round(employee.wage * getPriceLevel()); // 1日あたりの賃金(掛率込み)
   const stockOptionsGranted = grantHrmhrmStockOptionIfEligible(player);
 
   if (isAccident) {
-    const compensation = employee.wage * days + laborCost; // 事故があっても働かせていた分の人件費は発生している
+    const compensation = wageNow * days + laborCost; // 事故があっても働かせていた分の人件費は発生している
     return { ok: true, accident: true, compensation, laborCost, stockOptionsGranted, employee };
   }
 
-  const margin = Math.max(0, employee.wage * days - laborCost);
+  const margin = Math.max(0, wageNow * days - laborCost);
   return { ok: true, accident: false, margin, laborCost, stockOptionsGranted, employee };
 }
 
@@ -496,7 +501,7 @@ export function getTodayQuest(player, category) {
   if (!job) return null;
 
   const count = job.countMin + Math.floor(Math.random() * (job.countMax - job.countMin + 1));
-  const amount = Math.round(job.wageMin + Math.random() * (job.wageMax - job.wageMin));
+  const amount = Math.round((job.wageMin + Math.random() * (job.wageMax - job.wageMin)) * getPriceLevel()); // 受注時の名目額で確定
 
   const listing = {
     id: `q_${category}_${day}`,
@@ -555,11 +560,11 @@ export function completeQuest(player, category, lecternLocation) {
 
   const resumeBefore = getOrCreatePlayerResume(player, category);
   const grossWage = Math.round(listing.reward.amount * gradeWageMultiplier(resumeBefore.grade));
-  const laborCost = LABOR_COST_PER_DAY; // クエスト1件=1日分の労働とみなす
+  const laborCost = scaleEInt(LABOR_COST_PER_DAY); // クエスト1件=1日分の労働とみなす
   const wage = Math.max(0, grossWage - laborCost);
 
   const acc = getAccount(player);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds + wage);
+  creditEmeralds(player, wage, FLOW.QUEST_WAGE);
 
   listing.status = "completed";
   listing.claimedBy = { type: "player", id: player.name };
@@ -593,7 +598,7 @@ export function startConsultantContract(player, contractKey) {
     startDay: currentGlobalDay(),
     endDay: currentGlobalDay() + def.days,
     days: def.days,
-    margin: Math.round(def.marginMin + Math.random() * (def.marginMax - def.marginMin))
+    margin: Math.round((def.marginMin + Math.random() * (def.marginMax - def.marginMin)) * getPriceLevel()) // 契約時の名目額で確定
   };
   player.setDynamicProperty(CONSULTANT_KEY, JSON.stringify(contract));
 
@@ -622,11 +627,11 @@ export function completeConsultantContract(player, lecternLocation, radius = 6) 
   }
   if (!candidate) return { ok: false, reason: "noVillagerNearby" };
 
-  const laborCost = LABOR_COST_PER_DAY * contract.days;
+  const laborCost = scaleEInt(LABOR_COST_PER_DAY) * contract.days;
   const margin = Math.max(0, contract.margin - laborCost);
 
   const acc = getAccount(player);
-  player.setDynamicProperty("acc_emeralds", acc.emeralds + margin);
+  creditEmeralds(player, margin, FLOW.DISPATCH_MARGIN);
   player.setDynamicProperty(CONSULTANT_KEY, undefined);
 
   try {
@@ -645,9 +650,9 @@ export function reportConsultantLoss(player) {
   if (!contract) return { ok: false, reason: "noContract" };
 
   const daysLeft = Math.max(0, contract.endDay - currentGlobalDay());
-  const penalty = daysLeft * CONSULTANT_LOSS_PENALTY_PER_DAY;
+  const penalty = daysLeft * scaleEInt(CONSULTANT_LOSS_PENALTY_PER_DAY);
   const acc = getAccount(player);
-  player.setDynamicProperty("acc_emeralds", Math.max(0, acc.emeralds - penalty));
+  debitEmeralds(player, penalty, FLOW.LABOR_PENALTY, { clamp: true });
   player.setDynamicProperty(CONSULTANT_KEY, undefined);
   return { ok: true, penalty };
 }

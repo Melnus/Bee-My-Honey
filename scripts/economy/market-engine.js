@@ -1,3 +1,5 @@
+import { updatePriceIndex } from "./inflation.js";
+import { getPriceLevel } from "./price-level.js";
 import { world, system } from "@minecraft/server";
 import { CURRENCIES, STOCKS, COMMODITIES, FUTURES, MARKET_PATTERNS } from "../data/market-data.js";
 import { getLang, t } from "../i18n/lang.js";
@@ -88,7 +90,7 @@ export function getCurrencyRate(key, day = getCurrentCycleDay()) {
   const seed = world.getDynamicProperty(`curr_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
   const pressure = getDemandPressure("currency", key);
-  const rate = c.baseRate * (1.0 + val * c.volatility) * (1 + pressure);
+  const rate = c.baseRate * getPriceLevel() * (1.0 + val * c.volatility) * (1 + pressure);
   return Math.max(0.2, parseFloat(rate.toFixed(1)));
 }
 
@@ -97,7 +99,7 @@ export function getStockPrice(key, day = getCurrentCycleDay()) {
   const seed = world.getDynamicProperty(`stock_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
   const pressure = getDemandPressure("stock", key);
-  const price = s.base * (1.0 + val * s.vol) * (1 + pressure);
+  const price = s.base * getPriceLevel() * (1.0 + val * s.vol) * (1 + pressure);
   return Math.max(2, Math.round(price));
 }
 
@@ -107,7 +109,7 @@ export function getFuturesPrice(key, day = getCurrentCycleDay()) {
   const f = FUTURES[key];
   const seed = world.getDynamicProperty(`futures_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
-  const price = f.base * (1.0 + val * f.vol);
+  const price = f.base * getPriceLevel() * (1.0 + val * f.vol);
   return Math.max(1, Math.round(price));
 }
 
@@ -122,8 +124,9 @@ export function getCommodityPrice(key, day = getCurrentCycleDay()) {
   const seed = world.getDynamicProperty(`commodity_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
   const pressure = getDemandPressure("commodity", key);
-  const price = c.baseRate * (1.0 + val * c.volatility) * (1 + pressure);
-  return Math.max(0.5, parseFloat(price.toFixed(1)));
+  // 実際の価格 = ベース(baseRate) × 掛率(price-level.js) × 相場パターン × 需要圧力
+  const price = c.baseRate * getPriceLevel() * (1.0 + val * c.volatility) * (1 + pressure);
+  return Math.max(0.01, parseFloat(price.toFixed(2)));
 }
 
 export function getWeekCommodityPrices(key) {
@@ -141,8 +144,9 @@ export function getBulkCommodityPrice(key, day = getCurrentCycleDay()) {
   const seed = world.getDynamicProperty(`commodity_seed_${key}`) ?? 1;
   const val = patternValue(seed, day);
   const pressure = getDemandPressure("commodity_bulk", key);
-  const price = c.baseRate * (1.0 + val * c.volatility) * (1 + pressure);
-  return Math.max(0.5, parseFloat(price.toFixed(1)));
+  // 実際の価格 = ベース(baseRate) × 掛率(price-level.js) × 相場パターン × 需要圧力
+  const price = c.baseRate * getPriceLevel() * (1.0 + val * c.volatility) * (1 + pressure);
+  return Math.max(0.01, parseFloat(price.toFixed(2)));
 }
 
 export function getWeekBulkCommodityPrices(key) {
@@ -305,5 +309,7 @@ export function startWeeklyMarketCycle() {
     broadcastWeeklyNews();
   }
   world.setDynamicProperty("last_checked_day", day);
+  // インフレ指数: 終わった週があれば反映する(未処理の週が無ければ何もしない。寝て日付が飛んでも追いつく)
+  updatePriceIndex();
   }, 1200);
 }

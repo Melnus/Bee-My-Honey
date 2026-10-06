@@ -1,3 +1,6 @@
+import { getDividendRateDaily } from "./rates.js";
+import { scaleEInt } from "./price-level.js";
+import { creditEmeralds, FLOW } from "./ledger.js";
 import { world } from "@minecraft/server";
 import { STOCKS } from "../data/market-data.js";
 import { getStockPrice } from "./market-engine.js";
@@ -9,7 +12,8 @@ import { STR } from "../i18n/strings.js";
 // 配当システム（安全な醸造素材セット）
 // Stock Dividend System
 // ==========================================
-export const DIVIDEND_THRESHOLD = 100;
+export const DIVIDEND_THRESHOLD = 100; // ベース単位E
+export const getDividendThreshold = () => scaleEInt(DIVIDEND_THRESHOLD);
 
 export function getDividendEligibility(player, key) {
   const s = STOCKS[key];
@@ -24,7 +28,7 @@ export function getDividendEligibility(player, key) {
   const absDay = world.getDay();
   const lastClaim = player.getDynamicProperty(`div_last_claim_${key}`) ?? -1;
   return {
-    eligible: value >= DIVIDEND_THRESHOLD,
+    eligible: value >= getDividendThreshold(),
     value,
     alreadyClaimedToday: lastClaim === absDay
   };
@@ -38,9 +42,10 @@ export function giveDividendReward(player, key) {
     const price = getStockPrice(key);
     const holds = player.getDynamicProperty(`acc_stock_${key}`) ?? 0;
     const value = holds * price;
-    const payout = Math.max(1, Math.round(value * (s.dividendRate ?? 0.05)));
+    // 配当率は政策金利に連動(rates.js の getDividendRateDaily。1日あたり)。銘柄ごとに固有の率を持たせたい時だけ s.dividendRate で上書き
+    const payout = Math.max(1, Math.round(value * (s.dividendRate ?? getDividendRateDaily())));
     const acc = getAccount(player);
-    player.setDynamicProperty("acc_emeralds", acc.emeralds + payout);
+    creditEmeralds(player, payout, FLOW.DIVIDEND);
     return payout;
   }
 
@@ -97,7 +102,7 @@ export function claimDividend(player, key) {
   const { eligible, value, alreadyClaimedToday } = getDividendEligibility(player, key);
 
   if (!eligible) {
-    player.sendMessage(t(lang, STR.divNotEligible, DIVIDEND_THRESHOLD, value));
+    player.sendMessage(t(lang, STR.divNotEligible, getDividendThreshold(), value));
     return;
   }
   if (alreadyClaimedToday) {

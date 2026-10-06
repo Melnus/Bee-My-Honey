@@ -1,3 +1,6 @@
+import { scaleEInt } from "./price-level.js";
+import { getDepositRate } from "./rates.js";
+import { creditEmeralds, FLOW } from "./ledger.js";
 import { world, system, ItemStack, EnchantmentTypes } from "@minecraft/server";
 import { CURRENCIES, STOCKS } from "../data/market-data.js";
 import { getCurrencyRate, getStockPrice } from "./market-engine.js";
@@ -11,12 +14,14 @@ import { STR } from "../i18n/strings.js";
 // 銀行の利率設計: 銀行(安定・低リターン) < 株式 < 外貨/仮想通貨(不安定・高リターン)
 // 外貨・株式は変動率(volatility)が大きく元本割れもあり得るのに対し、
 // 銀行預金は変動なしの固定利子(元本保証)にすることで、リスク許容度に応じた住み分けを作る。
-export const BANK_INTEREST_RATE = 0.015; // 週1.5%固定（複利で毎週の経済リセット時に付与）
+// 預金金利は政策金利(rates.js。週0.06%)。複利で毎週の経済リセット時に付与。
+export { getDepositRate };
 
 // 1回の取引で扱える最大数量。giveItem 側のtick分割で鯖クラッシュ自体は防げるが、
 // UI側でも常識的な上限を設けておくことで、そもそも巨大な数量を選べないようにする。
 export const MAX_EMERALD_TX = 2304; // 物理エメラルド: インベントリ最大収容数(36スタック×64)
-export const MAX_E_TX = 2000000; // 電子取引残高(E)
+export const MAX_E_TX = 2000000; // 電子取引残高(ベース単位E。現状どこでも強制していない)
+export const getMaxETx = () => scaleEInt(MAX_E_TX); // 実際の上限(掛率込み)
 
 export function getAccount(player) {
   return {
@@ -56,9 +61,9 @@ export function checkAndGrantBankInterest(player) {
   if (lastWeek === currentWeek) return; // 今週分は受け取り済み
 
   const acc = getAccount(player);
-  const interest = Math.floor(acc.emeralds * BANK_INTEREST_RATE);
+  const interest = Math.floor(acc.emeralds * getDepositRate());
   if (interest > 0) {
-    player.setDynamicProperty("acc_emeralds", acc.emeralds + interest);
+    creditEmeralds(player, interest, FLOW.BANK_INTEREST);
     const lang = getLang(player);
     player.sendMessage(t(lang, STR.bankInterestMsg, interest));
   }

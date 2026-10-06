@@ -1,7 +1,10 @@
+import { debitEmeralds, FLOW } from "./ledger.js";
 import { world, system } from "@minecraft/server";
 import { getAccount, giveItem, giveEnchantedItem } from "./bank.js";
 import { adjustCredit, getCreditScore, recordOverdue, clearOverdue } from "./credit.js";
 import { getStockPrice } from "./market-engine.js";
+import { scaleEInt } from "./price-level.js";
+import { getCardRate } from "./rates.js";
 import {
   MAIL_ORDER_CATEGORIES, MAIL_ORDER_CATALOG, MAIL_ORDER_RARE_POOL,
   BARGAIN_DISCOUNT, BARGAIN_ITEM_COUNT
@@ -19,13 +22,14 @@ import { STR } from "../i18n/strings.js";
 
 // 信用スコア帯ごとの利用限度額と、契約時に固定される最低返済額
 const CARD_TIERS = [
-  { minScore: 750, limit: 1000, minPayment: 60 },
-  { minScore: 650, limit: 500, minPayment: 35 },
-  { minScore: 550, limit: 250, minPayment: 20 },
-  { minScore: 450, limit: 100, minPayment: 12 }
+  // 最低返済は限度額の2%(週)。以前は6〜12%で、週収入(約70E)に対して重すぎた。利息(週0.3%)を払ったうえで元本が減る水準
+  { minScore: 750, limit: 1000, minPayment: 20 },
+  { minScore: 650, limit: 500, minPayment: 10 },
+  { minScore: 550, limit: 250, minPayment: 5 },
+  { minScore: 450, limit: 100, minPayment: 2 }
 ];
 
-export const CARD_WEEKLY_INTEREST_RATE = 0.03; // 週3%（現実のリボ年利15%前後を週次にデフォルメ）
+// カードの週利は rates.js の getCardRate()(政策金利+0.24%=週0.30%、年約15.6%。現実のリボ年利15%前後)
 
 export function getCardTierForScore(score) {
   return CARD_TIERS.find((t) => score >= t.minScore) ?? null;
@@ -42,11 +46,14 @@ export function applyForCard(player) {
   const tier = getCardTierForScore(score);
   if (!tier) return { approved: false, reason: "score_too_low", score };
 
-  player.setDynamicProperty("cr_card_limit", tier.limit);
+  // 限度額・最低返済額は、契約時の名目額(ベース×掛率)で確定して保存する(後からインフレしても契約額は変わらない)
+  const limit = scaleEInt(tier.limit);
+  const minPayment = scaleEInt(tier.minPayment);
+  player.setDynamicProperty("cr_card_limit", limit);
   player.setDynamicProperty("cr_card_balance", 0);
-  player.setDynamicProperty("cr_card_min_payment", tier.minPayment);
+  player.setDynamicProperty("cr_card_min_payment", minPayment);
   player.setDynamicProperty("cr_card_suspended", false);
-  return { approved: true, limit: tier.limit, minPayment: tier.minPayment };
+  return { approved: true, limit, minPayment };
 }
 
 export function getAvailableCredit(player) {
@@ -124,9 +131,13 @@ export function getTodayBargainItems() {
 // ==========================================
 // 郵便販売 送料・プライム会員 / Shipping & Prime Membership
 // ==========================================
-export const MAIL_SHIPPING_FEE = 2; // 1回の注文ごとにかかる送料(E)
-export const PRIME_STANDARD_WEEKLY_FEE = 15; // Skeinプライムスタンダードのサブスク料(E/週)
-export const SKEIN_PRIME_PREMIUM_THRESHOLD = 300; // プライムプレミアムに加入できる最低SKN評価額(E)
+// ベース単位の名目額。実際の金額は下の関数で、掛率(price-level.js)を掛けて取る。
+export const MAIL_SHIPPING_FEE = 2; // 1回の注文ごとにかかる送料(ベース単位E)
+export const PRIME_STANDARD_WEEKLY_FEE = 6; // Skeinプライムスタンダードのサブスク料(ベース単位E/週)
+export const SKEIN_PRIME_PREMIUM_THRESHOLD = 300; // プライムプレミアムに加入できる最低SKN評価額(ベース単位E)
+export const getShippingFee = () => scaleEInt(MAIL_SHIPPING_FEE);
+export const getPrimeStandardWeeklyFee = () => scaleEInt(PRIME_STANDARD_WEEKLY_FEE);
+export const getPrimePremiumThreshold = () => scaleEInt(SKEIN_PRIME_PREMIUM_THRESHOLD);
 
 export function hasMailOrderPrimeStandard(player) {
   return !!player.getDynamicProperty("mail_prime_standard");
@@ -146,9 +157,10 @@ export function applyMailOrderPrimeBilling() {
     if (!hasMailOrderPrimeStandard(player)) continue;
     const acc = getAccount(player);
     const lang = getLang(player);
-    if (acc.emeralds >= PRIME_STANDARD_WEEKLY_FEE) {
-      player.setDynamicProperty("acc_emeralds", acc.emeralds - PRIME_STANDARD_WEEKLY_FEE);
-      player.sendMessage(t(lang, STR.primeStandardBilled, PRIME_STANDARD_WEEKLY_FEE));
+    const weeklyFee = getPrimeStandardWeeklyFee();
+    if (acc.emeralds >= weeklyFee) {
+      debitEmeralds(player, weeklyFee, FLOW.PRIME_FEE);
+      player.sendMessage(t(lang, STR.primeStandardBilled, weeklyFee));
     } else {
       unsubscribeMailOrderPrime(player);
       player.sendMessage(t(lang, STR.primeStandardCanceled));
@@ -162,7 +174,7 @@ export function getSkeinStockValue(player) {
 }
 
 export function isSkeinPrimePremiumEligible(player) {
-  return getSkeinStockValue(player) >= SKEIN_PRIME_PREMIUM_THRESHOLD;
+  return getSkeinStockValue(player) >= getPrimePremiumThreshold();
 }
 
 export function hasSkeinPrimePremium(player) {
@@ -206,7 +218,7 @@ export function purchaseItem(player, item, qty = 1) {
   if (player.getDynamicProperty("cr_card_suspended")) {
     return { ok: false, reason: "card_suspended" };
   }
-  const shipping = hasMailOrderPrimeStandard(player) ? 0 : MAIL_SHIPPING_FEE;
+  const shipping = hasMailOrderPrimeStandard(player) ? 0 : getShippingFee();
   const totalCost = item.price * qty + shipping;
   const acc = getAccount(player);
 
@@ -219,7 +231,7 @@ export function purchaseItem(player, item, qty = 1) {
     if (available < remaining) return { ok: false, reason: "credit_limit" };
   }
 
-  player.setDynamicProperty("acc_emeralds", acc.emeralds - fromCash);
+  debitEmeralds(player, fromCash, FLOW.MAIL_ORDER);
   if (remaining > 0) {
     const balance = player.getDynamicProperty("cr_card_balance") ?? 0;
     player.setDynamicProperty("cr_card_balance", balance + remaining);
@@ -243,7 +255,7 @@ export function payCardBalance(player, amount) {
   const balance = player.getDynamicProperty("cr_card_balance") ?? 0;
   const pay = Math.min(amount, balance, acc.emeralds);
   if (pay <= 0) return 0;
-  player.setDynamicProperty("acc_emeralds", acc.emeralds - pay);
+  debitEmeralds(player, pay, FLOW.CARD_PAYMENT);
   player.setDynamicProperty("cr_card_balance", balance - pay);
   return pay;
 }
@@ -256,7 +268,7 @@ export function applyCardBilling() {
     let balance = player.getDynamicProperty("cr_card_balance") ?? 0;
     if (balance <= 0) continue;
 
-    const interest = Math.ceil(balance * CARD_WEEKLY_INTEREST_RATE);
+    const interest = Math.ceil(balance * getCardRate());
     balance += interest;
 
     const minPayment = player.getDynamicProperty("cr_card_min_payment") ?? 0;
@@ -264,7 +276,7 @@ export function applyCardBilling() {
     const pay = Math.min(minPayment, balance, acc.emeralds);
 
     if (pay >= minPayment || pay >= balance) {
-      player.setDynamicProperty("acc_emeralds", acc.emeralds - pay);
+      debitEmeralds(player, pay, FLOW.CARD_PAYMENT);
       balance -= pay;
       player.setDynamicProperty("cr_card_balance", balance);
       player.setDynamicProperty("cr_card_payment_count", (player.getDynamicProperty("cr_card_payment_count") ?? 0) + 1);
@@ -309,8 +321,8 @@ export function reactivateCard(player) {
 export function restructureCard(player) {
   const balance = player.getDynamicProperty("cr_card_balance") ?? 0;
   if (balance <= 0) return { ok: false, reason: "no_balance" };
-  const minPayment = player.getDynamicProperty("cr_card_min_payment") ?? 10;
-  const newMin = Math.max(3, Math.floor(minPayment * 0.6));
+  const minPayment = player.getDynamicProperty("cr_card_min_payment") ?? scaleEInt(2);
+  const newMin = Math.max(scaleEInt(1), Math.floor(minPayment * 0.6));
   player.setDynamicProperty("cr_card_min_payment", newMin);
   clearCardOverdue(player);
   player.setDynamicProperty("cr_debt_restructured", true);
