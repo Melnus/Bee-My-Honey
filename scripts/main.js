@@ -4,6 +4,12 @@ import { MOB_EXCHANGE_BLOCKS } from "./data/mob-trade-data.js";
 
 import { startWeeklyMarketCycle } from "./economy/market-engine.js";
 import { startBankInterestOnSpawn } from "./economy/bank.js";
+import { startLedgerScriptEvent } from "./economy/ledger.js";
+import { startPriceLevelScriptEvent } from "./economy/price-level.js";
+import { startMigrationOnSpawn } from "./economy/migration.js";
+import { startPolicyScriptEvent } from "./economy/policy.js";
+import { startHrmhrm } from "./economy/hrmhrm.js";
+import { startDevBankScriptEvent } from "./economy/dev-bank.js";
 import { startInsuranceDeathWatch } from "./economy/insurance.js";
 import { startFreshnessPatrol } from "./economy/freshness.js";
 
@@ -27,7 +33,13 @@ import { recordLicenseWork } from "./economy/labor.js";
 startWeeklyMarketCycle();
 
 // 口座＆インベントリ管理: ログイン時の銀行利子チェック
+startMigrationOnSpawn(); // 既存ワールドの金額換算(利息の付与より先に登録すること)
 startBankInterestOnSpawn();
+startDevBankScriptEvent(); // 管理用: /scriptevent bmh:devbank で開発銀行機構の判断の履歴を表示
+startHrmhrm(); // HRMHRMの会計と自動運用。管理用: /scriptevent bmh:account [hrmhrm|list]
+startPolicyScriptEvent(); // 管理用: /scriptevent bmh:policy list|get|set|reset|history(金融政策のパラメータ)
+startPriceLevelScriptEvent(); // 管理用: /scriptevent bmh:pricelevel [インフレ指数] で物価水準を表示・変更
+startLedgerScriptEvent(); // 管理用: /scriptevent bmh:ledger [週数] でエメラルド発行台帳の集計を表示
 
 // 食品の鮮度(在庫側): プレイヤーのインベントリを5秒ごとに走査し、鮮度のスタンプ(loreに埋め込み)を更新。期限切れは腐った肉に変換
 startFreshnessPatrol();
