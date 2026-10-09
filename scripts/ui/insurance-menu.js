@@ -66,3 +66,5 @@ function openInsuranceDetail(player, key) {
     openInsuranceMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
+
+

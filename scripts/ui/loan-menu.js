@@ -1,11 +1,11 @@
 import { scaleEInt } from "../economy/price-level.js";
-import { ActionFormData } from "@minecraft/server-ui";
+import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { getAccount } from "../economy/bank.js";
 import { getCreditInfo, getCreditStatusLabel } from "../economy/credit.js";
 import {
-  LOAN_TIERS, hasActiveLoan, applyForLoan,
+  LOAN_TIERS, hasActiveLoan, applyForLoan, getLoanSplit, repayLoanEarly,
   hasActiveLending, generateBorrowerCandidates, lendToBorrower
 } from "../economy/loan.js";
 import { openBankingMenu } from "./bank-menu.js";
@@ -25,12 +25,14 @@ export function openLoanMenu(player) {
     .body(body)
     .button(t(lang, STR.loanBtnBorrow))
     .button(t(lang, STR.loanBtnLend))
+    .button(t(lang, STR.loanBtnManage))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 2) return openBankingMenu(player);
+    if (res.canceled || res.selection === 3) return openBankingMenu(player);
     if (res.selection === 0) return openBorrowMenu(player);
     if (res.selection === 1) return openLendMenu(player);
+    if (res.selection === 2) return openLoanManageMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
@@ -98,5 +100,78 @@ export function openLendMenu(player) {
       player.sendMessage(t(lang, STR.loanLentMsg, chosen.name, chosen.amount, chosen.weeks));
     }
     openLoanMenu(player);
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+// ==========================================
+// 融資管理 / Loan Management (借入の確認・繰上返済・貸付の確認)
+// ==========================================
+export function openLoanManageMenu(player) {
+  const lang = getLang(player);
+  const lines = [];
+
+  const borrowing = hasActiveLoan(player);
+  if (borrowing) {
+    const { balance, principal, interest } = getLoanSplit(player);
+    lines.push(t(
+      lang, STR.loanManageBorrowLine,
+      balance, principal, interest,
+      player.getDynamicProperty("cr_loan_weekly_payment") ?? 0,
+      player.getDynamicProperty("cr_loan_weeks_left") ?? 0
+    ));
+  } else {
+    lines.push(t(lang, STR.loanManageNoBorrow));
+  }
+
+  if (hasActiveLending(player)) {
+    lines.push(t(
+      lang, STR.loanManageLendLine,
+      player.getDynamicProperty("loan_lent_name") ?? "",
+      player.getDynamicProperty("loan_lent_amount") ?? 0,
+      player.getDynamicProperty("loan_lent_weeks_left") ?? 0
+    ));
+  } else {
+    lines.push(t(lang, STR.loanManageNoLend));
+  }
+
+  const form = new ActionFormData()
+    .title(t(lang, STR.loanManageTitle))
+    .body(lines.join("\n\n"));
+  if (borrowing) form.button(t(lang, STR.loanBtnRepay));
+  form.button(t(lang, STR.back));
+
+  form.show(player).then((res) => {
+    const backIndex = borrowing ? 1 : 0;
+    if (res.canceled || res.selection === backIndex) return openLoanMenu(player);
+    return openRepayMenu(player);
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+function openRepayMenu(player) {
+  const lang = getLang(player);
+  if (!hasActiveLoan(player)) return openLoanManageMenu(player);
+
+  const { balance, principal } = getLoanSplit(player);
+  const acc = getAccount(player);
+
+  // 利息がまだ残っていない(元本=残高)ローンでは、トグルを切り替えても結果は同じ。
+  const form = new ModalFormData()
+    .title(t(lang, STR.loanRepayTitle))
+    .toggle(t(lang, STR.loanRepayToggle, principal, balance, acc.emeralds), { defaultValue: false });
+
+  form.show(player).then((res) => {
+    if (res.canceled) return openLoanManageMenu(player);
+    const includeInterest = !!res.formValues[0];
+    const result = repayLoanEarly(player, includeInterest);
+    if (!result.ok) {
+      if (result.reason === "insufficient_funds") {
+        player.sendMessage(t(lang, STR.loanRepayShort, result.need, result.shortage));
+      }
+    } else if (result.closed) {
+      player.sendMessage(t(lang, STR.loanRepayClosedMsg, result.paid));
+    } else {
+      player.sendMessage(t(lang, STR.loanRepayPartialMsg, result.paid, result.balance));
+    }
+    openLoanManageMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }

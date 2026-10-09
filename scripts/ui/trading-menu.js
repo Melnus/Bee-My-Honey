@@ -59,3 +59,5 @@ export function openLanguageMenu(player) {
     openTradingMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
+
+

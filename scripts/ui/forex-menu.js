@@ -173,3 +173,5 @@ export function openForexSellModal(player, currKey, qty = null) {
     openForexTradeDialog(player, currKey);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
+
+

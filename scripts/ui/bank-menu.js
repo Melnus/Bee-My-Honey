@@ -1,4 +1,4 @@
-import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
+import { creditEmeralds, debitEmeralds, FLOW, getAccountHistory } from "../economy/ledger.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
@@ -24,13 +24,15 @@ export function openBankingMenu(player) {
     .button(t(lang, STR.bankDepositBtn))
     .button(t(lang, STR.bankWithdrawBtn))
     .button(t(lang, STR.bankLoanDeskBtn))
+    .button(t(lang, STR.bankHistoryBtn))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 3) return openTradingMenu(player);
+    if (res.canceled || res.selection === 4) return openTradingMenu(player);
     if (res.selection === 0) openBankDepositModal(player);
     else if (res.selection === 1) openBankWithdrawModal(player);
     else if (res.selection === 2) openLoanMenu(player);
+    else if (res.selection === 3) openBankHistoryMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
@@ -122,4 +124,26 @@ export function openBankWithdrawModal(player, qty = null) {
     }
     openBankingMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+// ==========================================
+// 入出金履歴 / Account History (直近の入出金。新しい順)
+// ==========================================
+export function openBankHistoryMenu(player) {
+  const lang = getLang(player);
+  const list = getAccountHistory(player);
+
+  const lines = list.map((e) => {
+    const label = t(lang, STR.historyFlow[e.c] ?? STR.historyFlowUnknown);
+    const party = e.p ? t(lang, e.w === "in" ? STR.historyFrom : STR.historyTo, e.p) : "";
+    return t(lang, STR.historyLine, e.w === "in", e.a, e.d, label + party);
+  });
+
+  const form = new ActionFormData()
+    .title(t(lang, STR.historyTitle))
+    .body(lines.length > 0 ? lines.join("\n") : t(lang, STR.historyEmpty))
+    .button(t(lang, STR.back));
+
+  form.show(player).then(() => openBankingMenu(player))
+    .catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }

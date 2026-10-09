@@ -247,3 +247,5 @@ function openFmDeliverPrices(player, genre, kinds, regionTag, onBack) {
     openFmGenre(player, genre, onBack);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
+
+
