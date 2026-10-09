@@ -23,3 +23,5 @@ export function t(lang, record, ...args) {
   const v = record[lang] ?? record.en;
   return typeof v === "function" ? v(...args) : v;
 }
+
+

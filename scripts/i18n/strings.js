@@ -40,6 +40,48 @@ export const STR = {
   bankConfirmDeposit: { ja: "この数量で預け入れる", en: "Confirm Deposit" },
   bankWithdrawBtn: { ja: "引き出す", en: "Withdraw" },
   bankLoanDeskBtn: { ja: "ローン窓口", en: "Loan Desk" },
+  // ------------------------------------------
+  // 入出金履歴 — strings.js の bankLoanDeskBtn の直後に貼る
+  // ------------------------------------------
+  bankHistoryBtn: { ja: "入出金履歴", en: "Account History" },
+  historyTitle: { ja: "入出金履歴", en: "Account History" },
+  historyEmpty: { ja: "まだ履歴がありません。", en: "No history yet." },
+  historyLine: {
+    ja: (isIn, amount, day, text) => `${isIn ? "§a+" : "§c-"}${amount}E§r ${day}日目 ${text}`,
+    en: (isIn, amount, day, text) => `${isIn ? "§a+" : "§c-"}${amount}E§r Day ${day} ${text}`
+  },
+  historyFrom: { ja: (name) => `(${name}から)`, en: (name) => ` (from ${name})` },
+  historyTo: { ja: (name) => `(${name}へ)`, en: (name) => ` (to ${name})` },
+  historyFlowUnknown: { ja: "その他", en: "Other" },
+  historyFlow: {
+    quest_wage: { ja: "クエスト報酬", en: "Quest reward" },
+    dispatch_margin: { ja: "派遣マージン", en: "Dispatch margin" },
+    hire_bonus: { ja: "雇用ボーナス", en: "Hiring bonus" },
+    bank_interest: { ja: "預金利息", en: "Deposit interest" },
+    dividend: { ja: "配当", en: "Dividend" },
+    loan_disbursed: { ja: "ローン借入", en: "Loan disbursed" },
+    loan_repaid: { ja: "ローン返済", en: "Loan repayment" },
+    lend_out: { ja: "融資(貸出)", en: "Lending out" },
+    lend_return: { ja: "融資の回収", en: "Lending returned" },
+    card_payment: { ja: "カード返済", en: "Card payment" },
+    commodity_buy: { ja: "現物の購入", en: "Commodity buy" },
+    commodity_sell: { ja: "現物の売却", en: "Commodity sell" },
+    bulk_buy: { ja: "まとめ買い", en: "Bulk buy" },
+    bulk_sell: { ja: "まとめ売り", en: "Bulk sell" },
+    forex_buy: { ja: "外貨の購入", en: "Forex buy" },
+    forex_sell: { ja: "外貨の売却", en: "Forex sell" },
+    stock_buy: { ja: "株の購入", en: "Stock buy" },
+    stock_sell: { ja: "株の売却", en: "Stock sell" },
+    futures_margin: { ja: "先物の証拠金", en: "Futures margin" },
+    futures_settle: { ja: "先物の決済", en: "Futures settlement" },
+    mail_order: { ja: "郵便販売", en: "Mail order" },
+    prime_fee: { ja: "プライム会費", en: "Prime fee" },
+    insurance: { ja: "保険料", en: "Insurance" },
+    labor_compensation: { ja: "事故補償", en: "Accident compensation" },
+    labor_penalty: { ja: "違約金", en: "Penalty" },
+    deposit: { ja: "預け入れ", en: "Deposit" },
+    withdraw: { ja: "引き出し", en: "Withdrawal" }
+  },
   bankWithdrawModalTitle: { ja: "エメラルドを引き出す", en: "Withdraw Emeralds" },
   bankWithdrawStepBody: {
     ja: (qty, bal) => `口座から引き出す\n\n数量: ${qty} E\n口座残高: ${bal} E`,
@@ -511,6 +553,39 @@ export const STR = {
     en: (name, amount, weeks, ratePct, repayPct) => `${name} - ${amount}E / ${weeks}w / ${ratePct}% / ${repayPct}% likely`
   },
   loanInsufficientFunds: { ja: "§c資金が足りません。", en: "§cInsufficient funds." },
+  // ------------------------------------------
+  // 融資管理(繰上返済) — strings.js の loanLentMsg の直後に貼る
+  // ------------------------------------------
+  loanBtnManage: { ja: "融資管理", en: "Loan Management" },
+  loanManageTitle: { ja: "融資管理", en: "Loan Management" },
+  loanManageBorrowLine: {
+    ja: (balance, principal, interest, weekly, weeks) => `【借入】残高${balance}E(元本${principal}E + 利息${interest}E)\n週${weekly}E / 残り${weeks}週`,
+    en: (balance, principal, interest, weekly, weeks) => `[Borrowing] Balance ${balance}E (principal ${principal}E + interest ${interest}E)\n${weekly}E/week, ${weeks} weeks left`
+  },
+  loanManageNoBorrow: { ja: "【借入】なし", en: "[Borrowing] None" },
+  loanManageLendLine: {
+    ja: (name, amount, weeks) => `【貸付】${name}に${amount}E / 満期まで残り${weeks}週`,
+    en: (name, amount, weeks) => `[Lending] ${amount}E to ${name} / ${weeks} weeks to maturity`
+  },
+  loanManageNoLend: { ja: "【貸付】なし", en: "[Lending] None" },
+  loanBtnRepay: { ja: "返済する", en: "Repay" },
+  loanRepayTitle: { ja: "繰上返済", en: "Early Repayment" },
+  loanRepayToggle: {
+    ja: (principal, balance, cash) => `利息もまとめて全額返す\nOFF: 借りた分${principal}Eだけ返す(残りの利息は週次で支払い)\nON: 残高${balance}Eを全額返して完済\n所持: ${cash}E`,
+    en: (principal, balance, cash) => `Pay everything including interest\nOFF: repay the principal (${principal}E) only; the rest follows the weekly schedule\nON: pay the full balance (${balance}E) and close the loan\nBalance: ${cash}E`
+  },
+  loanRepayShort: {
+    ja: (need, shortage) => `§c現金が足りません。必要${need}E(あと${shortage}E)`,
+    en: (need, shortage) => `§cNot enough funds. Need ${need}E (${shortage}E short)`
+  },
+  loanRepayClosedMsg: {
+    ja: (paid) => `§a${paid}Eを返済して完済しました。`,
+    en: (paid) => `§aRepaid ${paid}E and closed the loan.`
+  },
+  loanRepayPartialMsg: {
+    ja: (paid, balance) => `§a借りた分${paid}Eを返済しました。残りの利息は${balance}Eで、週次で支払います。`,
+    en: (paid, balance) => `§aRepaid ${paid}E principal. Remaining interest ${balance}E follows the weekly schedule.`
+  },
   loanLentMsg: {
     ja: (name, amount, weeks) => `§a${name}に${amount}Eを貸し付けました。${weeks}週後に結果がわかります。`,
     en: (name, amount, weeks) => `§aLent ${amount}E to ${name}. Result in ${weeks} weeks.`
@@ -575,6 +650,83 @@ export const STR = {
       `This category requires a license.\n\n${actionLabel} ${blockName} within a single chunk to make progress ${biomeNote}.\nCurrent progress: ${progress} / ${quota}\n(needed for ${stageLabel})`
   },
 
+  // ------------------------------------------
+  // 求人掲示板(受注・納品・放棄) / 派遣(施設・産出) — dev/quest-template-spec.md, dev/dispatch-spec.md
+  // ------------------------------------------
+  laborFirstJobButton: {
+    ja: (title) => `[初回] ${title}\n報告するだけ / シュルカーボックス1個`,
+    en: (title) => `[First time] ${title}\nJust report in / 1 shulker box`
+  },
+  laborFirstJobBody: {
+    ja: (max) =>
+      `スタッフサービスへようこそ。\n\n・求人は毎日4件、掲示されます。資格が必要な求人はロックされていて、ライセンスを取ると受けられます。\n・求人を選んで「受注する」を押し、書見台の近くのチェスト・樽・シェルカーボックスに必要な数を入れて「納品する」を押すと、報酬が口座に入ります。\n・同時に受けられるのは${max}件までです。\n\nまずは、この説明を読んだことを報告してください。報酬はシュルカーボックス1個です。`,
+    en: (max) =>
+      `Welcome to Staff Services.\n\n- Four jobs are posted every day. Jobs that need a license are locked until you get it.\n- Pick a job, press Claim, put the required items in a chest, barrel or shulker box near the lectern, then press Deliver to get paid.\n- You can hold up to ${max} jobs at once.\n\nFirst, report that you have read this. Your reward is one shulker box.`
+  },
+  laborBtnReport: { ja: "報告する", en: "Report" },
+  laborFirstJobDoneMsg: {
+    ja: "§aシュルカーボックスを1個受け取りました。求人の掲示から、仕事を選んでみましょう。",
+    en: "§aYou received a shulker box. Pick a job from the board."
+  },
+  laborFirstJobFailedMsg: { ja: "§cシュルカーボックスを渡せませんでした。もう一度お試しください。", en: "§cCould not give the shulker box. Please try again." },
+  laborBoardBody: {
+    ja: (max, active) => `今日の掲示と、受注中のクエストです。\n同時に受けられるのは${max}件まで(いま${active}件)。受注は受けた週の終わりまで有効です。`,
+    en: (max, active) => `Today's board and your active quests.\nYou can hold up to ${max} at once (now ${active}). A claim lasts until the end of the week.`
+  },
+  laborBoardTagClaimed: { ja: "[受注中] ", en: "[Active] " },
+  laborBoardTagDone: { ja: "[完了] ", en: "[Done] " },
+  laborBoardTagLocked: { ja: "[資格が必要] ", en: "[License needed] " },
+  laborBoardButton: {
+    ja: (tag, title, itemName, count, reward) => `${tag}${title}\n${itemName} x${count} / ${reward}E`,
+    en: (tag, title, itemName, count, reward) => `${tag}${title}\n${itemName} x${count} / ${reward}E`
+  },
+  laborQuestDetailBody: {
+    ja: (title, itemName, count, reward, grade, claimedBy, hint) =>
+      `${title}\n${itemName} を ${count} 個納品\n報酬目安: ${reward} E(${grade}級ボーナス適用後に確定)\n受注中の人: ${claimedBy}\n\n${hint}`,
+    en: (title, itemName, count, reward, grade, claimedBy, hint) =>
+      `${title}\nDeliver ${count} x ${itemName}\nReward estimate: ${reward} E (final after the ${grade}-rank bonus)\nClaimed by: ${claimedBy}\n\n${hint}`
+  },
+  laborQuestNobody: { ja: "まだいません", en: "nobody yet" },
+  laborQuestHintClaim: { ja: "受注すると、今週の終わりまで納品できます。", en: "Claim it to deliver until the end of this week." },
+  laborQuestHintDeliver: {
+    ja: "書見台の近くのチェスト・樽・シェルカーボックスに必要な数を入れてから「納品する」を押してください。",
+    en: "Put the required items in a chest, barrel or shulker box near the lectern, then press Deliver."
+  },
+  laborQuestHintDone: { ja: "このクエストは完了済みです。", en: "This quest is already complete." },
+  laborBtnClaim: { ja: "受注する", en: "Claim" },
+  laborBtnAbandon: { ja: "放棄する", en: "Abandon" },
+  laborClaimedMsg: { ja: (title) => `§a「${title}」を受注しました。`, en: (title) => `§aClaimed "${title}".` },
+  laborClaimLimitMsg: {
+    ja: (max) => `§c同時に受けられるクエストは${max}件までです。`,
+    en: (max) => `§cYou can hold at most ${max} quests at once.`
+  },
+  laborClaimNoLicenseMsg: { ja: "§cこのクエストにはライセンスが必要です。", en: "§cThis quest needs a license." },
+  laborClaimFailedMsg: { ja: "§c受注できませんでした。", en: "§cCould not claim the quest." },
+  laborAbandonedMsg: { ja: (title) => `「${title}」を放棄しました。`, en: (title) => `Abandoned "${title}".` },
+
+  laborBtnDispatch: { ja: "派遣する", en: "Dispatch" },
+  laborDispatchGenreBody: { ja: "派遣先のジャンルを選んでください。", en: "Choose a facility type." },
+  laborDispatchOperatorBody: { ja: "運営主体(施設)を選んでください。", en: "Choose the operator (facility)." },
+  laborDispatchDaysBody: {
+    ja: "派遣する日数を選んでください。\n日数と賃金に応じた現物が、完了して回収した時に施設へ届きます。",
+    en: "Choose the number of days.\nGoods worth the wage x days are delivered to the facility when you collect."
+  },
+  laborDispatchedToMsg: {
+    ja: (name, facilityName, days, itemName, count) => `§a${name}を${facilityName}へ${days}日間派遣しました。産出予定: ${itemName} x${count}`,
+    en: (name, facilityName, days, itemName, count) => `§aDispatched ${name} to ${facilityName} for ${days} days. Expected output: ${itemName} x${count}`
+  },
+  laborDispatchDeliveredMsg: {
+    ja: (facilityName, itemName, count) => `${facilityName}に ${itemName} x${count} が届きました。`,
+    en: (facilityName, itemName, count) => `${itemName} x${count} was delivered to ${facilityName}.`
+  },
+  laborRetiredMsg: {
+    ja: (name, days) => `§e${name}は通算${days}日の派遣に達したため、任期満了で除名になりました。`,
+    en: (name, days) => `§e${name} has reached ${days} total dispatched days and has been retired.`
+  },
+  laborEmployeeTenureLine: {
+    ja: (total, limit) => `通算派遣日数: ${total}/${limit}日`,
+    en: (total, limit) => `Total dispatched days: ${total}/${limit}`
+  },
   laborQuestTitle: { ja: "求人掲示板", en: "Quest Board" },
   laborQuestCompletedBody: {
     ja: "本日の依頼は完了済みです。また明日お越しください。",
@@ -753,3 +905,5 @@ export const STR = {
       `§7Hold at least ${threshold}E worth of HRMHRM stock, and you'll automatically receive stock options (company shares) every time you deliver a quest, complete a consultant contract, or collect a villager dispatch.`
   }
 };
+
+
