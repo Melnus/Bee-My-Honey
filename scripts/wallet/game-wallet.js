@@ -65,3 +65,4 @@ export function importWalletCode(player, codeText) {
   player.setDynamicProperty("acc_curr_honeycomb", acc.honeycomb + decoded.amount);
   return { ok: true, credited: decoded.amount, publicKey: decoded.publicKey, nonce: decoded.nonce };
 }
+
