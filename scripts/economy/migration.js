@@ -107,3 +107,5 @@ export function startMigrationOnSpawn() {
     for (const player of world.getPlayers()) migratePlayerIfNeeded(player);
   });
 }
+
+

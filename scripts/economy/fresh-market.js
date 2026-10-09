@@ -225,3 +225,5 @@ export function claimFreshMarketEarnings(player) {
   world.setDynamicProperty(key, 0);
   return amount;
 }
+
+

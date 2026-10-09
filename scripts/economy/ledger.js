@@ -128,24 +128,66 @@ function balanceOf(player) {
   return player.getDynamicProperty("acc_emeralds") ?? 0;
 }
 
+// ---- 入出金履歴(銀行メニューの「入出金履歴」に出す。プレイヤーごとに直近 HISTORY_KEEP 件) ----
+// 台帳(上の集計)は理由別の合計しか持たない。「いつ・誰から/誰へ・いくら」はこちらで持つ。
+// 1件 = { d: 日, w: "in"|"out", a: 額, c: 理由(FLOW), p: 相手(省略可) }
+const HISTORY_KEY = "acc_history";
+export const HISTORY_KEEP = 30;
+// 履歴に載せない理由。旧縮尺の換算は、プレイヤーの入出金ではない。
+const HISTORY_SKIP = new Set([FLOW.MIGRATION]);
+// 同じ週に何度も入る小さな入金は、1行にまとめる(履歴が利息で埋まらないように)。
+const HISTORY_MERGE = new Set([FLOW.BANK_INTEREST]);
+
+export function getAccountHistory(player) {
+  const raw = player.getDynamicProperty(HISTORY_KEY);
+  if (typeof raw !== "string") return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function pushHistory(player, direction, category, amount, party) {
+  if (HISTORY_SKIP.has(category)) return;
+  const day = world.getDay();
+  const list = getAccountHistory(player);
+  const last = list[0]; // 新しい順に持つ
+  if (HISTORY_MERGE.has(category) && last && last.c === category && last.w === direction && Math.floor(last.d / 7) === Math.floor(day / 7)) {
+    last.a += amount;
+    last.d = day;
+  } else {
+    const entry = { d: day, w: direction, a: amount, c: category };
+    if (party) entry.p = String(party).slice(0, 24);
+    list.unshift(entry);
+  }
+  if (list.length > HISTORY_KEEP) list.length = HISTORY_KEEP;
+  player.setDynamicProperty(HISTORY_KEY, JSON.stringify(list));
+}
+
 // システム → プレイヤー。口座に amount を足し、台帳の in に記録する。足した額を返す。
-export function creditEmeralds(player, amount, category) {
+// from を渡すと、入出金履歴に「○○から」と残る(例: "HRMHRM")。
+export function creditEmeralds(player, amount, category, { from = null } = {}) {
   if (!(amount > 0)) return 0;
   player.setDynamicProperty("acc_emeralds", balanceOf(player) + amount);
   record("in", category, amount, player.name);
+  pushHistory(player, "in", category, amount, from);
   return amount;
 }
 
 // プレイヤー → システム。口座から amount を引き、台帳の out に記録する。引いた額を返す。
 // clamp:true なら残高を超える分は引かず(口座は0止まり)、実際に引けた額だけ記録する。
 // clamp:false(既定)で残高不足なら何もせず0を返す(呼び出し側が事前に残高を確認している前提の保険)。
-export function debitEmeralds(player, amount, category, { clamp = false } = {}) {
+// to を渡すと、入出金履歴に「○○へ」と残る。
+export function debitEmeralds(player, amount, category, { clamp = false, to = null } = {}) {
   if (!(amount > 0)) return 0;
   const bal = balanceOf(player);
   const actual = clamp ? Math.min(bal, amount) : amount;
   if (actual > bal || actual <= 0) return 0;
   player.setDynamicProperty("acc_emeralds", bal - actual);
   record("out", category, actual, player.name);
+  pushHistory(player, "out", category, actual, to);
   return actual;
 }
 
@@ -255,3 +297,4 @@ export function startLedgerScriptEvent() {
     else console.warn("[BeeMyHoney] " + text);
   });
 }
+

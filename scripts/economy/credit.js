@@ -115,3 +115,5 @@ export function recordOverdue(player, longOverdueThreshold = 3) {
 export function clearOverdue(player) {
   player.setDynamicProperty("cr_loan_overdue", false);
 }
+
+

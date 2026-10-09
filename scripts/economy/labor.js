@@ -21,6 +21,8 @@ import {
 } from "../data/labor-data.js";
 import { getAccount, giveItem } from "./bank.js";
 import { getStockPrice } from "./market-engine.js";
+import { getFacility, rollFacilityOutput, depositToFacility } from "./facility.js";
+import { getPolicyParam } from "./policy.js";
 
 // ==========================================
 // 労働市場 コアロジック / Labor Market Core
@@ -52,7 +54,7 @@ import { getStockPrice } from "./market-engine.js";
 // }
 // ==========================================
 
-function currentGlobalDay() {
+export function currentGlobalDay() {
   return world.getDay();
 }
 
@@ -68,7 +70,7 @@ export const HRMHRM_STOCK_OPTION_THRESHOLD = 100; // 既存の配当しきい値
 export const getHrmhrmStockOptionThreshold = () => scaleEInt(HRMHRM_STOCK_OPTION_THRESHOLD);
 const HRMHRM_STOCK_OPTION_AMOUNT = 1; // 1回の労働イベントごとに付与される株数
 
-function grantHrmhrmStockOptionIfEligible(player) {
+export function grantHrmhrmStockOptionIfEligible(player) {
   const price = getStockPrice(HRMHRM_STOCK_KEY);
   const holds = player.getDynamicProperty(`acc_stock_${HRMHRM_STOCK_KEY}`) ?? 0;
   const value = holds * price;
@@ -216,19 +218,28 @@ export function registerNearbyVillagerAsEmployee(player, lecternLocation, radius
   return { ok: true, employee, grantEmeralds: scaleEInt(OWNERS_CLUB_REGISTRATION_GRANT) };
 }
 
-export function dispatchEmployee(player, employeeId, days) {
+// 派遣の契約: 履歴書を施設に送る。契約時に、産出(品目と個数)をその場で確定する(抽選のやり直しはしない)。
+// 産出の価値は賃金 × 日数 × 産出係数(政策パラメータ dispatch_output_ratio)。
+export function dispatchEmployee(player, employeeId, days, facilityId) {
   const employees = getEmployees(player);
   const employee = employees.find((e) => e.id === employeeId);
   if (!employee || employee.identity.tag !== "villager" || employee.status !== "idle") return { ok: false };
+  const facility = getFacility(facilityId);
+  if (!facility) return { ok: false, reason: "unknownFacility" };
 
+  const output = rollFacilityOutput(facility, employee.wage, days);
   employee.status = "dispatched";
   employee.dispatchDays = days;
   employee.dispatchEndDay = currentGlobalDay() + days;
+  employee.dispatchFacilityId = facility.id;
+  employee.dispatchOutput = output;
   saveEmployees(player, employees);
-  return { ok: true };
+  return { ok: true, facility, output };
 }
 
 // 派遣完了分を回収する。事故が発生した場合は補填(=支出)が発生する。
+// 無事に戻れば、契約時に確定した産出が施設の出力先(HRMHRM公共施設ならプール)に入る。
+// 通算の派遣日数(dispatchedDaysTotal)が resume_tenure_days に達したら、その履歴書は除名する(自動のみ。手動の解雇はない)。
 export function collectDispatch(player, employeeId) {
   const employees = getEmployees(player);
   const idx = employees.findIndex((e) => e.id === employeeId);
@@ -244,16 +255,24 @@ export function collectDispatch(player, employeeId) {
   const accidentChance = getAccidentChance(count);
   const isAccident = Math.random() < accidentChance;
   const days = employee.dispatchDays ?? 1;
+  const facility = getFacility(employee.dispatchFacilityId);
+  const output = employee.dispatchOutput ?? null;
 
   employee.status = "idle";
   employee.dispatchDays = null;
   employee.dispatchEndDay = null;
+  employee.dispatchFacilityId = null;
+  employee.dispatchOutput = null;
+  employee.dispatchedDaysTotal = (employee.dispatchedDaysTotal ?? 0) + days;
   employee.records.push({
     job: "dispatch",
     org: HRMHRM_ORG_NAME,
     completedAt: currentGlobalDay(),
     grade: isAccident ? "accident" : employee.grade
   });
+
+  const retired = employee.dispatchedDaysTotal >= getPolicyParam("resume_tenure_days");
+  if (retired) employees.splice(idx, 1);
   saveEmployees(player, employees);
 
   const laborCost = scaleEInt(LABOR_COST_PER_DAY) * days;
@@ -262,11 +281,13 @@ export function collectDispatch(player, employeeId) {
 
   if (isAccident) {
     const compensation = wageNow * days + laborCost; // 事故があっても働かせていた分の人件費は発生している
-    return { ok: true, accident: true, compensation, laborCost, stockOptionsGranted, employee };
+    return { ok: true, accident: true, compensation, laborCost, stockOptionsGranted, employee, retired, facility };
   }
 
+  let delivered = null;
+  if (facility && output && depositToFacility(facility, output.itemId, output.count)) delivered = output;
   const margin = Math.max(0, wageNow * days - laborCost);
-  return { ok: true, accident: false, margin, laborCost, stockOptionsGranted, employee };
+  return { ok: true, accident: false, margin, laborCost, stockOptionsGranted, employee, retired, facility, delivered };
 }
 
 export function removeEmployee(player, employeeId) {
@@ -308,7 +329,7 @@ export function getOrCreatePlayerResume(player, category) {
 }
 
 // クエスト納品完了後に、仕事履歴(records)を1件追加し、グレード/レベルを再計算する。
-function advancePlayerResume(player, category, jobKey) {
+export function advancePlayerResume(player, category, jobKey) {
   const employees = getEmployees(player);
   let idx = employees.findIndex((e) => e.identity.tag === "player" && e.category === category);
   let resume = idx === -1 ? getOrCreatePlayerResume(player, category) : employees[idx];
@@ -449,131 +470,7 @@ export function getNearbyContainers(dimension, origin, radius = 6) {
   return containers;
 }
 
-// カテゴリごとに日替わりのクエストを1つ生成し、日付が変わるまで固定する。
-function questStateKey(category) {
-  return `labor_quest_${category}`;
-}
-
-function pickJobForCategory(category) {
-  if (category === "unqualified") {
-    return UNQUALIFIED_JOBS[Math.floor(Math.random() * UNQUALIFIED_JOBS.length)];
-  }
-  const def = QUALIFIED_JOBS[category];
-  return def ? def.jobs[Math.floor(Math.random() * def.jobs.length)] : null;
-}
-
-// ==========================================
-// クエスト・リスティング共通テンプレート (quest_listing)
-// ------------------------------------------
-// 次アプデの「会社」機能で、プレイヤーがクエストを発注し、他プレイヤー(や村人)が
-// 受注する仕組みを作る予定。同じ枠組みは株式の上場や郵便販売の出品にも転用できる
-// 想定のため、今回のうちから発注/受注の形をしたデータ構造にしておく。
-// 今回はまだ発注UIはなく、HRMHRM(issuer.type: "hrmhrm")がグレードに応じて
-// 自動生成し、生成された瞬間にそのプレイヤー専用として割り当てる(claimedBy固定)。
-//
-// {
-//   id,
-//   kind: "quest",                          // 将来: "stock_listing" | "mail_order" 等も同じ枠組みに乗る想定
-//   issuer: { type: "hrmhrm"|"company"|"player", id: null },
-//   title: { ja, en },
-//   requirement: { itemId, count },         // 納品条件
-//   reward: { amount, currency: "emerald" },
-//   category,                                // 対応する求人カテゴリ(HRMHRM生成分のみ意味を持つ)
-//   jobKey,                                  // どの求人テンプレートから生成されたか(履歴書records用)
-//   status: "open" | "completed",           // 将来的に "claimed" 等が増える想定
-//   createdAt,                               // 生成日(world day)
-//   claimedBy: { type: "player", id: null }  // 今回は生成と同時にそのプレイヤー専用になる
-// }
-// ==========================================
-export function getTodayQuest(player, category) {
-  const day = currentGlobalDay();
-  const raw = player.getDynamicProperty(questStateKey(category));
-  if (raw) {
-    try {
-      const listing = JSON.parse(raw);
-      if (listing.createdAt === day) return listing;
-    } catch (e) {
-      // 壊れていた場合は再生成する
-    }
-  }
-
-  const job = pickJobForCategory(category);
-  if (!job) return null;
-
-  const count = job.countMin + Math.floor(Math.random() * (job.countMax - job.countMin + 1));
-  const amount = Math.round((job.wageMin + Math.random() * (job.wageMax - job.wageMin)) * getPriceLevel()); // 受注時の名目額で確定
-
-  const listing = {
-    id: `q_${category}_${day}`,
-    kind: "quest",
-    issuer: { type: "hrmhrm", id: null },
-    title: job.name,
-    requirement: { itemId: job.itemId, count },
-    reward: { amount, currency: "emerald" },
-    category,
-    jobKey: job.key,
-    status: "open",
-    createdAt: day,
-    claimedBy: { type: "player", id: null }
-  };
-  player.setDynamicProperty(questStateKey(category), JSON.stringify(listing));
-  return listing;
-}
-
-// 納品物が「書見台の近くのチェスト/樽/シェルカーボックス」にあるか確認し、消費して報酬を支払う。
-// (プレイヤーの手持ちではなく、集荷箱にまとめて置いておく方式。日をまたがない限り1日1回まで。)
-export function completeQuest(player, category, lecternLocation) {
-  const listing = getTodayQuest(player, category);
-  if (!listing) return { ok: false, reason: "noQuest" };
-  if (listing.status === "completed") return { ok: false, reason: "alreadyCompleted" };
-
-  const origin = lecternLocation ?? player.location;
-  const containers = getNearbyContainers(player.dimension, origin);
-  if (containers.length === 0) return { ok: false, reason: "noContainer" };
-
-  const { itemId, count } = listing.requirement;
-  let have = 0;
-  for (const inv of containers) {
-    for (let i = 0; i < inv.size; i++) {
-      const item = inv.getItem(i);
-      if (item && item.typeId === itemId) have += item.amount;
-    }
-  }
-  if (have < count) return { ok: false, reason: "insufficientItems", needed: count };
-
-  let left = count;
-  for (const inv of containers) {
-    for (let i = 0; i < inv.size && left > 0; i++) {
-      const item = inv.getItem(i);
-      if (item && item.typeId === itemId) {
-        if (item.amount <= left) {
-          left -= item.amount;
-          inv.setItem(i, undefined);
-        } else {
-          item.amount -= left;
-          inv.setItem(i, item);
-          left = 0;
-        }
-      }
-    }
-  }
-
-  const resumeBefore = getOrCreatePlayerResume(player, category);
-  const grossWage = Math.round(listing.reward.amount * gradeWageMultiplier(resumeBefore.grade));
-  const laborCost = scaleEInt(LABOR_COST_PER_DAY); // クエスト1件=1日分の労働とみなす
-  const wage = Math.max(0, grossWage - laborCost);
-
-  const acc = getAccount(player);
-  creditEmeralds(player, wage, FLOW.QUEST_WAGE);
-
-  listing.status = "completed";
-  listing.claimedBy = { type: "player", id: player.name };
-  player.setDynamicProperty(questStateKey(category), JSON.stringify(listing));
-  const resumeAfter = advancePlayerResume(player, category, listing.jobKey);
-  const stockOptionsGranted = grantHrmhrmStockOptionIfEligible(player);
-
-  return { ok: true, wage, grossWage, laborCost, stockOptionsGranted, grade: resumeAfter.grade, level: resumeAfter.level };
-}
+// クエストの掲示・受注・納品・放棄は economy/quest-board.js に移した(dev/quest-template-spec.md)。
 
 // ---------- コンサルタントサービス（村人を借りる） ----------
 const CONSULTANT_KEY = "labor_consultant_contract";
@@ -656,3 +553,5 @@ export function reportConsultantLoss(player) {
   player.setDynamicProperty(CONSULTANT_KEY, undefined);
   return { ok: true, penalty };
 }
+
+

@@ -221,3 +221,5 @@ export function quoteInCurrency(itemId, currKey, { minUnits = LOT_MIN_UNITS } = 
   const exactUnits = (unitE * lot) / rate;
   return { lot, value: Math.max(1, Math.round(exactUnits)), exactUnits, unitE };
 }
+
+

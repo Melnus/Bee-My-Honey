@@ -200,3 +200,5 @@ export function sellBulkCommodity(player, commodityKey, originLocation) {
 
   return { ok: true, side: "sell", commodityKey, unitPrice, totalAmount, qty: SHULKER_UNIT_QTY };
 }
+
+

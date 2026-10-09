@@ -61,3 +61,5 @@ export function getLastInflationRate() {
   const v = world.getDynamicProperty(INFLATION_LAST_RATE_KEY);
   return typeof v === "number" ? v : 0;
 }
+
+

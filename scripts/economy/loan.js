@@ -63,6 +63,7 @@ export function applyForLoan(player, tierIndex) {
   player.setDynamicProperty("cr_loan_balance", totalDue);
   player.setDynamicProperty("cr_loan_weekly_payment", weeklyPayment);
   player.setDynamicProperty("cr_loan_weeks_left", weeks);
+  player.setDynamicProperty("cr_loan_principal_left", amount); // 元本の残り(繰上返済の「借りた分だけ返す」用)
   player.setDynamicProperty("cr_loan_count", (player.getDynamicProperty("cr_loan_count") ?? 0) + 1);
   clearOverdue(player);
 
@@ -96,6 +97,9 @@ export function applyLoanBilling() {
       debitEmeralds(player, pay, FLOW.LOAN_REPAID);
       const newBalance = balance - pay;
       const weeksLeft = Math.max(0, (player.getDynamicProperty("cr_loan_weeks_left") ?? 1) - 1);
+      const { principal } = getLoanSplit(player); // 引き落とし前の元本の残り
+      const principalPaid = balance > 0 ? Math.round(pay * (principal / balance)) : 0;
+      player.setDynamicProperty("cr_loan_principal_left", Math.max(0, principal - principalPaid));
       player.setDynamicProperty("cr_loan_balance", newBalance);
       player.setDynamicProperty("cr_loan_weeks_left", weeksLeft);
 
@@ -118,10 +122,48 @@ export function applyLoanBilling() {
   }
 }
 
+// 借入残高を「元本」と「利息」に分けて返す。
+// cr_loan_principal_left が無い(この更新より前に組んだ)ローンは、残高の全額を元本として扱う。
+export function getLoanSplit(player) {
+  const balance = player.getDynamicProperty("cr_loan_balance") ?? 0;
+  const stored = player.getDynamicProperty("cr_loan_principal_left");
+  const principal = stored === undefined ? balance : Math.min(balance, stored);
+  return { balance, principal, interest: balance - principal };
+}
+
+// 繰上返済(週次の引き落としを待たずに今返す)。
+//   includeInterest=false … 借りた分(元本)だけ返す。残った利息は従来どおり週次で払っていく。
+//   includeInterest=true  … 利息もまとめて全額返して完済する。
+// 現金が足りなければ何も動かさず、不足額を返す。
+export function repayLoanEarly(player, includeInterest) {
+  if (!hasActiveLoan(player)) return { ok: false, reason: "no_loan" };
+  const { balance, principal } = getLoanSplit(player);
+  const pay = includeInterest ? balance : principal;
+  if (pay <= 0) return { ok: false, reason: "nothing_to_pay" };
+
+  const acc = getAccount(player);
+  if (acc.emeralds < pay) return { ok: false, reason: "insufficient_funds", need: pay, shortage: pay - acc.emeralds };
+
+  debitEmeralds(player, pay, FLOW.LOAN_REPAID);
+  const newBalance = balance - pay;
+  if (newBalance <= 0) {
+    finishLoan(player, true);
+    return { ok: true, paid: pay, closed: true, balance: 0 };
+  }
+
+  // 元本だけ返した場合: 残るのは利息のみ。残り週数で割り直して週額を下げる。
+  const weeksLeft = Math.max(1, player.getDynamicProperty("cr_loan_weeks_left") ?? 1);
+  player.setDynamicProperty("cr_loan_balance", newBalance);
+  player.setDynamicProperty("cr_loan_principal_left", 0);
+  player.setDynamicProperty("cr_loan_weekly_payment", Math.ceil(newBalance / weeksLeft));
+  return { ok: true, paid: pay, closed: false, balance: newBalance };
+}
+
 function finishLoan(player, paidOff) {
   player.setDynamicProperty("cr_loan_balance", 0);
   player.setDynamicProperty("cr_loan_weekly_payment", 0);
   player.setDynamicProperty("cr_loan_weeks_left", 0);
+  player.setDynamicProperty("cr_loan_principal_left", 0);
   player.setDynamicProperty("cr_loan_overdue_streak", 0);
   clearOverdue(player);
   if (paidOff) {
@@ -224,3 +266,4 @@ export function resolveLending(player) {
   player.setDynamicProperty("loan_lent_original_weeks", 0);
   return result;
 }
+

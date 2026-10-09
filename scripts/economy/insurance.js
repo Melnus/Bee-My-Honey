@@ -118,3 +118,5 @@ export function startInsuranceDeathWatch() {
     handleInsuranceDeath(entity, event.damageSource);
   });
 }
+
+

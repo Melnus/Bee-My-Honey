@@ -48,3 +48,5 @@ export function getLenderRate(repayProbability, weeks) {
   const lossPremiumTotal = ((1 - LENDING_DEFAULT_RECOVERY) * (1 - repayProbability)) / repayProbability;
   return getPolicyRate() + getPolicyParam("lender_margin_spread") + lossPremiumTotal / weeks;
 }
+
+

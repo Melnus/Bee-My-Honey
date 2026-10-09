@@ -118,3 +118,5 @@ export function claimDividend(player, key) {
     player.sendMessage(t(lang, STR.divClaimMsg, t(lang, STOCKS[key].name)));
   }
 }
+
+

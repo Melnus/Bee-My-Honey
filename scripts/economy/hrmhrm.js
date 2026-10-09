@@ -7,6 +7,7 @@ import {
 } from "./account.js";
 import { emptyWeekRecord, runManagement, finalizeWeek } from "./entity-ops.js";
 import { processFundingRequests, formatDevBankReport } from "./dev-bank.js";
+import { settlePool, formatPoolReport } from "./facility.js";
 
 // ==========================================
 // HRMHRMの会計と週次の運用 / HRMHRM Accounting & Weekly Run  (dev/hrmhrm-accounting.md, dev/development-bank.md)
@@ -25,7 +26,7 @@ import { processFundingRequests, formatDevBankReport } from "./dev-bank.js";
 // 現金はマイナスになりうる(借越)。
 //
 // 週次の流れ(runHrmhrmWeekly。終わった週を順に追いつく):
-//   各口座の週の締め → 運用(下限を割れば開発銀行機構に申請。余剰があれば貴金属を買う)
+//   各口座の週の締め(HRMHRMは、派遣のプールの保持数を超えた現物の換金も収益に入れる) → 運用(下限を割れば開発銀行機構に申請。余剰があれば貴金属を買う)
 //   → 開発銀行機構が申請を審査(売れる資産があれば却下して売却 / なければ最低限の運用資金を支給)
 //   → 精算不能の介入の判定(3週超: 村は人口0で登録解除・人口ありで介入。法人は介入)
 // ==========================================
@@ -119,6 +120,17 @@ export function runHrmhrmWeekly() {
       const acct = getEntityAccount(id);
       if (!acct || acct.processedWeek >= w) continue;
       const record = id === HRMHRM_ID ? closeWeekFromLedger(acct, w) : emptyWeekRecord(w);
+      if (id === HRMHRM_ID) {
+        // 派遣で溜まったプールの現物のうち、保持数を超えた分をその時の売値で換金する(市場=外部の相手方への売却)
+        const sale = settlePool();
+        if (sale.cash > 0) {
+          acct.cash += sale.cash;
+          record.revenue += sale.cash;
+          record.net += sale.cash;
+          record.cashDelta += sale.cash;
+          record.actions.push({ type: "pool_sale", cash: sale.cash });
+        }
+      }
       runManagement(acct, record);
       finalizeWeek(acct, record);
       saveEntityAccount(acct);
@@ -149,6 +161,7 @@ export function formatHrmhrmReport() {
   const inter = getInterventions().filter((r) => r.status === "open");
   if (inter.length) lines.push(`介入案件: ${inter.map((r) => r.entityId + "(" + r.reason + ")").join(", ")}`);
   if (getTotalWriteOff() > 0) lines.push(`消えたお金(登録解除): ${fmt(getTotalWriteOff())}E`);
+  lines.push(formatPoolReport());
   return lines.join("\n");
 }
 
@@ -172,3 +185,5 @@ export function startHrmhrm() {
     else console.warn("[BeeMyHoney] " + text);
   });
 }
+
+

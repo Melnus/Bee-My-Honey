@@ -108,3 +108,5 @@ export function finalizeWeek(acct, record) {
   acct.weekly.push(record);
   acct.processedWeek = record.week;
 }
+
+

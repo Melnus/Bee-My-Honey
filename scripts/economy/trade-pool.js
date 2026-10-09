@@ -178,3 +178,5 @@ export function recordExchangePrice(itemId, price) {
 export function getExchangePriceHistory(itemId) {
   return readJson(priceHistoryKey(itemId), []);
 }
+
+

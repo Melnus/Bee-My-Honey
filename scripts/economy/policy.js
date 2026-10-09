@@ -20,6 +20,7 @@ const POLICY_KEY = "bmh_policy_v1";
 const HISTORY_MAX = 50;
 
 // unit: "rate" = 週あたりの金利(小数。0.0006 = 0.06%) / "weeks" = 週数 / "base" = ベース単位のE(実際の金額は×掛率)
+//        "count" = 件数・個数 / "days" = 日数 / "ratio" = 倍率
 export const POLICY_PARAMS = {
   policy_rate: {
     unit: "rate",
@@ -72,6 +73,32 @@ export const POLICY_PARAMS = {
     unit: "base", default: 500, min: 0, max: 100000, maxStep: 500, cooldownWeeks: 1,
     label: { ja: "開発銀行: 売却可能とみなす資産の最低額(ベース単位E)", en: "Development bank: minimum sellable assets (base E)" },
     desc: { ja: "申請元の現物資産の時価がこれ以上なら、申請を却下して資産を売却させる", en: "If the applicant's holdings are worth at least this, the application is rejected and assets are sold" }
+  },
+  // ---- 労働市場(クエスト・派遣) ----
+  quest_max_active: {
+    unit: "count", default: 2, min: 1, max: 10, maxStep: 1, cooldownWeeks: 1,
+    label: { ja: "クエスト: 同時に受けられる件数", en: "Quests: max active per player" },
+    desc: { ja: "1人が同時に受注できるクエストの数", en: "How many quests one player can have claimed at once" }
+  },
+  dispatch_output_ratio: {
+    unit: "ratio", default: 1, min: 0.05, max: 5, maxStep: 0.25, cooldownWeeks: 1,
+    label: { ja: "派遣: 産出係数", en: "Dispatch: output ratio" },
+    desc: { ja: "施設の産出の価値 = 派遣の賃金 × 日数 × この係数(1で賃金と同額)", en: "Facility output value = dispatch wage x days x this ratio (1 = same as the wage)" }
+  },
+  resume_tenure_days: {
+    unit: "days", default: 1095, min: 365, max: 3650, maxStep: 365, cooldownWeeks: 1,
+    label: { ja: "派遣: 除名までの通算派遣日数", en: "Dispatch: tenure limit (days)" },
+    desc: { ja: "村人の履歴書の通算派遣日数がこれに達すると除名(3年 = 1095日)", en: "A villager's resume is retired once its total dispatched days reach this (3 years = 1095 days)" }
+  },
+  pool_keep_per_item: {
+    unit: "count", default: 640, min: 0, max: 100000, maxStep: 320, cooldownWeeks: 1,
+    label: { ja: "プール: 品目ごとの保持数", en: "Pool: keep per item" },
+    desc: { ja: "週の締めで、この数を超えた分だけを換金する", en: "At the weekly close, only the amount above this is converted to cash" }
+  },
+  pool_sale_ratio: {
+    unit: "ratio", default: 1, min: 0.1, max: 1.5, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "プール: 換金の掛け率", en: "Pool: sale ratio" },
+    desc: { ja: "換金額 = その時の売値(基準価格 × 掛率) × この掛け率", en: "Cash = current selling price (base price x price level) x this ratio" }
   }
 };
 
@@ -218,6 +245,9 @@ function pct(v) {
 function fmtParam(def, v) {
   if (def.unit === "weeks") return `${v}週`;
   if (def.unit === "base") return `${v}E(ベース)`;
+  if (def.unit === "count") return `${v}件`;
+  if (def.unit === "days") return `${v}日`;
+  if (def.unit === "ratio") return `x${v}`;
   return pct(v);
 }
 
@@ -256,3 +286,5 @@ export function startPolicyScriptEvent() {
     else console.warn("[BeeMyHoney] " + text);
   });
 }
+
+

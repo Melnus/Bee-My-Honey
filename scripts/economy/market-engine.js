@@ -313,3 +313,5 @@ export function startWeeklyMarketCycle() {
   updatePriceIndex();
   }, 1200);
 }
+
+
