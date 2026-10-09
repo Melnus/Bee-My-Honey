@@ -3,9 +3,26 @@
 All notable changes to Bee My Honey are listed here, newest first.
 
 - **Stable release:** 0.3.3
-- **Latest release:** 0.4.2
+- **Latest release:** 0.4.5
 
 Versions 0.1.1 to 0.3.3 were summarized from the project's development notes. 0.3.2 was an internal snapshot and was never released.
+
+---
+
+## 0.4.5
+
+### Added
+- **Loan management.** Bank -> Loan Window -> "Loan Management" shows your borrowing (balance, principal, interest, weekly payment, weeks left) and lending. While you owe money you can repay early: with the toggle off you repay only the principal (the remaining interest follows the weekly schedule and the weekly payment drops); with it on you repay everything including interest and close the loan. Loans taken before this version have no principal record, so "principal only" repays the whole balance.
+- **Account history.** Bank -> "Account History" lists your last 30 deposits and withdrawals (date, amount, reason, and the counterparty where known, e.g. "from HRMHRM Partners HLD"). Weekly deposit interest is merged into one line per week.
+- **Quest board.** The Staff Services board now shows the same 4 quests for everyone each day (one per category: unlicensed, Nether, Underwater, End; licensed categories are locked until you hold the license). Select a quest to claim it; select it again to deliver or abandon. Claimed quests stay in your list after the board rotates and expire at the end of the week you claimed them. Quest details show who has claimed it (HRMHRM quests can be claimed by everyone). You can hold `quest_max_active` quests at once (default 2). Rewards are paid to your account and appear in the history as coming from HRMHRM.
+- **First part-time job.** The first time you open Staff Services with no work history, the board shows a one-off "Your First Part-time Job" at the top. It explains how the board works; press Report and you receive one shulker box (no items to deliver, and it does not count toward `quest_max_active`). Players who already have quests, villagers or license progress never see it.
+- **Dispatch to facilities.** Owners Club dispatch now sends the resume to a facility: choose a type (Farm / Mine / Factory) -> operator -> days. The output (item and amount) is fixed at contract time: wage x days x `dispatch_output_ratio` (default 1) divided by the item's base price. When you collect, the goods go to the facility's output (HRMHRM's three facilities feed HRMHRM's pool). Player-company facilities are planned.
+- **Pool settlement.** At the end of each week HRMHRM converts the part of each pooled item above `pool_keep_per_item` (default 640) into cash at the current selling price (`pool_sale_ratio`, default 1) and counts it as revenue. `/scriptevent bmh:account` now also lists the pool.
+- **Resume retirement.** A villager's resume is retired automatically once its total dispatched days reach `resume_tenure_days` (default 1095 = 3 years). There is no manual dismissal.
+- **New policy parameters** (`/scriptevent bmh:policy`): `quest_max_active`, `dispatch_output_ratio`, `resume_tenure_days`, `pool_keep_per_item`, `pool_sale_ratio`.
+
+### Changed
+- Daily quests are no longer generated per player with random numbers; the board is derived from the date, so everyone sees the same quests. Progress on the previous per-player daily quests is not carried over (at most one day).
 
 ---
 
@@ -140,3 +157,5 @@ Versions 0.1.1 to 0.3.3 were summarized from the project's development notes. 0.
 
 - Five forex currencies, five stocks, flower futures (single contract) and the cold wallet (story-code method).
 - Japanese translation of the readme added.
+
+
