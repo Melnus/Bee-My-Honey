@@ -1,13 +1,13 @@
 {
   "format_version": 2,
   "header": {
-    "name": "Bee My Honey [0.4.3]",
+    "name": "Bee My Honey [0.4.5]",
     "description": "Bees in the Minecraft world are hard workers.  Today, they're diligently collecting honey and storing it in their hives. ...But they're not just storing it.  They're also investing their collected assets, trading stocks and foreign currencies. ",
     "uuid": "9c49065c-500b-4435-a4b0-6dd967949c9b",
     "version": [
       0,
       4,
-      3
+      5
     ],
     "min_engine_version": [
       1,
@@ -24,7 +24,7 @@
       "version": [
         0,
         4,
-        3
+        5
       ]
     },
     {
@@ -34,7 +34,7 @@
       "version": [
         0,
         4,
-        3
+        5
       ]
     }
   ],

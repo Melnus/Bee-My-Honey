@@ -13,7 +13,7 @@ Bee My Honey is an economic simulation add-on for Minecraft Bedrock Edition. Usi
 | Channel | Version | Notes |
 |---|---|---|
 | Stable | **0.3.3** | Recommended for regular worlds. |
-| Latest | **0.4.2** | Adds bulk commodity trading, the Paws & Blackpots energy shop, the Fresh Market and the food freshness system. Features that only exist in 0.4.x are marked **[0.4]** below. |
+| Latest | **0.4.5** | Adds bulk commodity trading, the Paws & Blackpots energy shop, the Fresh Market and the food freshness system (0.4.0-0.4.2), plus loan management, account history, the daily quest board and dispatch to facilities (0.4.5). Features that only exist in 0.4.x are marked **[0.4]** below. |
 
 See [CHANGELOG.md](/CHANGELOG.md) for the full history.
 
@@ -56,6 +56,7 @@ Hold a regular Book (`minecraft:book`) in your main hand unless noted otherwise,
 - All exchange instruments operate on this balance.
 - Inventory overflow protection: if your inventory is full when withdrawing or collecting a dividend, the excess drops safely at your feet.
 - The bank also links to the loan desk (see Loans & Credit Score).
+- **[0.4] Account History:** the bank lists your last 30 deposits and withdrawals with the reason and, where known, the counterparty (for example "from HRMHRM Partners HLD").
 
 ### 2. Forex Market
 Five currencies with different base rates and volatility:
@@ -137,6 +138,7 @@ Perishable food in your **inventory** (including the off-hand) slowly spoils and
 - Five loan tiers. Higher tiers need a higher credit score and carry higher interest. You can borrow one loan at a time, and you can also lend one.
 - The credit score (300-850) is shared by loans, the credit card, insurance and bankruptcy handling.
 - Repayment, card billing and insurance premiums are handled at the weekly rollover.
+- **[0.4] Loan Management** (Bank -> Loan Window): shows your borrowing and lending, and lets you repay early. With the toggle off you repay only the principal (the remaining interest follows the weekly schedule); with it on you repay everything and close the loan.
 
 ### 11. Insurance
 Marine (drowning), fishing-catch and undersea-asset policies, opened from Bone Block + Flower Pot. Marine insurance pays out on drowning deaths; the others pay a fixed amount on death.
@@ -146,10 +148,11 @@ Use a Lectern with Paper. Shop the catalog by category (fresh goods, household, 
 
 ### 13. Labor Market (HRMHRM Partners HLD)
 Use a Lectern with a Book.
-- **Staff Service:** daily quests, delivered by container.
+- **Staff Service:** four quests are posted each day, the same for everyone (one per category; licensed categories are locked until you hold the license). Claim a quest, then select it again to deliver it by container or abandon it. A claim lasts until the end of the week, and you can hold 2 at a time by default. New players get a one-off "first part-time job" that gives a shulker box. **[0.4]**
 - **Licenses:** Nether / Underwater / End licenses are earned by actually placing or breaking the relevant blocks in those places.
 - **Consultant Service:** lease villagers.
-- **Owners' Club:** register villagers as resumes and dispatch them (128 registered villagers maximum; accident risk rises above 100).
+- **Owners' Club:** register villagers as resumes and dispatch them to a facility (Farm / Mine / Factory; HRMHRM operates all three for now). The output is fixed when you sign the contract and is delivered to the facility's stock when you collect. A villager retires automatically after 3 years (1095 days) of total dispatch. 128 registered villagers maximum; accident risk rises above 100. **[0.4]**
+- HRMHRM converts the stock above a set level into cash every week.
 
 ### 14. Cold Wallet (Offline Story Codes)
 Encodes account Honeycomb into a story code of twenty keywords across five sentences. Codes can be shared on message boards, on notes, or imported into other worlds.
@@ -186,6 +189,8 @@ Full bilingual support for English and Japanese.
 ## Credits & Specifications
 
 - Add-on Name: Bee My Honey
-- Version: 0.4.2 (stable: 0.3.3)
+- Version: 0.4.5 (stable: 0.3.3)
 - Author: Melnus
 - Target Platform: Minecraft Bedrock Edition (Script API supported environments)
+
+
