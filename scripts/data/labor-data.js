@@ -182,7 +182,27 @@ export const LABOR_ITEM_NAMES = {
   prismarine_shard: { ja: "プリズマリンの欠片", en: "Prismarine Shard" },
   end_stone: { ja: "エンドストーン", en: "End Stone" },
   prismarine_bricks: { ja: "プリズマリンレンガ", en: "Prismarine Bricks" },
-  end_bricks: { ja: "エンドストーンレンガ", en: "End Stone Bricks" }
+  end_bricks: { ja: "エンドストーンレンガ", en: "End Stone Bricks" },
+  // ---- 施設の産出品(派遣。economy/facility.js) ----
+  carrot: { ja: "ニンジン", en: "Carrot" },
+  potato: { ja: "ジャガイモ", en: "Potato" },
+  beetroot: { ja: "ビートルート", en: "Beetroot" },
+  sugar_cane: { ja: "サトウキビ", en: "Sugar Cane" },
+  pumpkin: { ja: "カボチャ", en: "Pumpkin" },
+  apple: { ja: "リンゴ", en: "Apple" },
+  coal: { ja: "石炭", en: "Coal" },
+  raw_copper: { ja: "銅の原石", en: "Raw Copper" },
+  raw_iron: { ja: "鉄の原石", en: "Raw Iron" },
+  raw_gold: { ja: "金の原石", en: "Raw Gold" },
+  redstone: { ja: "レッドストーン", en: "Redstone" },
+  lapis_lazuli: { ja: "ラピスラズリ", en: "Lapis Lazuli" },
+  diamond: { ja: "ダイヤモンド", en: "Diamond" },
+  bucket: { ja: "バケツ", en: "Bucket" },
+  shears: { ja: "ハサミ", en: "Shears" },
+  piston: { ja: "ピストン", en: "Piston" },
+  compass: { ja: "コンパス", en: "Compass" },
+  clock: { ja: "時計", en: "Clock" },
+  hopper: { ja: "ホッパー", en: "Hopper" }
 };
 
 // ---- ライセンス対象バイオームの表示名 ----
@@ -272,3 +292,5 @@ export function getAccidentChance(employeeCount) {
 
 // OW協会からの補助金（オーナーズクラブ登録時の一時金）
 export const OWNERS_CLUB_REGISTRATION_GRANT = 50;
+
+

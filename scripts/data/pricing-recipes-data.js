@@ -212,3 +212,5 @@ PRICING_RECIPES[M("lava_bucket")] = craft([[M("bucket"), 1], [g("lava_source", 6
 for (const [tier, days] of Object.entries(ENCHANT_BOOK_LABOR_DAYS)) {
   PRICING_RECIPES["enchanted_book:" + tier] = craft([[M("book"), 1], [M("lapis_lazuli"), 3], [labor(days), 1]]);
 }
+
+

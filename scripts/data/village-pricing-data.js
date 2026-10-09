@@ -162,3 +162,5 @@ export const VILLAGE_FLOOR_RATES = {
   "minecraft:beetroot": 1 / 15, // 農民(新米、ビートルート15→1E)
   "minecraft:chicken": 1 / 14 // 肉屋(新米、生の鶏肉14→1E)
 };
+
+

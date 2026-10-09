@@ -86,3 +86,5 @@ export const FM_NONPERISHABLE_MAX_AGE_DAYS = 28;
 
 // 価格推移グラフに使う直近の約定件数
 export const FM_CHART_POINTS = 14;
+
+

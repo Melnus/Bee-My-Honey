@@ -277,3 +277,5 @@ export const BOATS = [
   { itemId: "minecraft:pale_oak_boat", name: { ja: "青白いオークのボート", en: "Pale Oak Boat" } },
   { itemId: "minecraft:poplar_boat", name: { ja: "ポプラのボート", en: "Poplar Boat" } }
 ];
+
+

@@ -263,3 +263,5 @@ export const MAIL_ORDER_RARE_POOL = priced(MAIL_ORDER_RARE_SPECS, "rare");
 // お買い得コーナーの割引率（20%引き）と、1日に並ぶ点数
 export const BARGAIN_DISCOUNT = 0.8;
 export const BARGAIN_ITEM_COUNT = 5;
+
+

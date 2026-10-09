@@ -53,3 +53,5 @@ export const PB_GIFT_MOOD_GAIN = 2;  // 魚をあげる(1匹ごと)
 
 // ネコが喜ぶ魚(バニラで猫が食べるもの)
 export const PB_GIFT_FISH = ["minecraft:cod", "minecraft:salmon"];
+
+

@@ -460,3 +460,5 @@ export const FUTURES_ICONS = {
   sunflower: "§6●",
   sakura: "§d●"
 };
+
+

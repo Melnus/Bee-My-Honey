@@ -112,3 +112,5 @@ export function getFoodCategory(typeId) {
   if (RAW_FOOD_ITEMS.has(typeId)) return FOOD_CATEGORY.RAW;
   return null; // 未登録の非食品はそもそも対象外
 }
+
+
