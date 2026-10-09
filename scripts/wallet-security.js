@@ -309,3 +309,4 @@ export function markNonceUsed(publicKey, nonce) {
   const lastNonce = world.getDynamicProperty(key) ?? 0;
   if (nonce > lastNonce) world.setDynamicProperty(key, nonce);
 }
+
