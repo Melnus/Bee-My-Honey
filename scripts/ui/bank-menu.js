@@ -6,6 +6,8 @@ import { getDepositRate, MAX_EMERALD_TX, getAccount, getItemCountWithBlocks, rem
 import { promptQuantity } from "./shared.js";
 import { openTradingMenu } from "./trading-menu.js";
 import { openLoanMenu } from "./loan-menu.js";
+import { listTransferTargets, transferEmeralds, transferFee, remainingToday, maxTransfer } from "../economy/transfer.js";
+import { getPolicyParam } from "../economy/policy.js";
 
 const EMERALD_ID = "minecraft:emerald";
 const EMERALD_BLOCK_ID = "minecraft:emerald_block";
@@ -25,15 +27,63 @@ export function openBankingMenu(player) {
     .button(t(lang, STR.bankWithdrawBtn))
     .button(t(lang, STR.bankLoanDeskBtn))
     .button(t(lang, STR.bankHistoryBtn))
+    .button(t(lang, STR.bankSendBtn))
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 4) return openTradingMenu(player);
+    if (res.canceled || res.selection === 5) return openTradingMenu(player);
     if (res.selection === 0) openBankDepositModal(player);
     else if (res.selection === 1) openBankWithdrawModal(player);
     else if (res.selection === 2) openLoanMenu(player);
     else if (res.selection === 3) openBankHistoryMenu(player);
+    else if (res.selection === 4) openTransferMenu(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+// 送金: 相手(オンラインのプレイヤー)を選び、金額を決めて、確認してから送る
+export function openTransferMenu(player) {
+  const lang = getLang(player);
+  const targets = listTransferTargets(player);
+  if (targets.length === 0) {
+    player.sendMessage(t(lang, STR.transferNoPlayers));
+    return openBankingMenu(player);
+  }
+  const acc = getAccount(player);
+  const form = new ActionFormData().title(t(lang, STR.transferPickTitle)).body(t(lang, STR.transferPickBody, acc.emeralds, Math.round(getPolicyParam("transfer_fee_rate") * 100), remainingToday(player)));
+  targets.forEach((p) => form.button(p.name));
+  form.button(t(lang, STR.back));
+  form.show(player).then((res) => {
+    if (res.canceled || res.selection === targets.length) return openBankingMenu(player);
+    const to = targets[res.selection];
+    const cap = maxTransfer(player);
+    if (cap < 1) { player.sendMessage(remainingToday(player) < 1 ? t(lang, STR.transferOverCapMsg, remainingToday(player)) : t(lang, STR.transferFailMsg)); return openBankingMenu(player); }
+    promptQuantity(player, {
+      title: t(lang, STR.transferModalTitle, to.name),
+      max: cap,
+      onSubmit: (q) => confirmTransfer(player, to, q),
+      onBack: () => openTransferMenu(player)
+    });
+  }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
+}
+
+function confirmTransfer(player, to, qty) {
+  const lang = getLang(player);
+  const bal = getAccount(player).emeralds;
+  new ActionFormData()
+    .title(t(lang, STR.transferModalTitle, to.name))
+    .body(t(lang, STR.transferConfirmBody, to.name, qty, transferFee(qty), bal))
+    .button(t(lang, STR.transferConfirmBtn))
+    .button(t(lang, STR.back))
+    .show(player).then((res) => {
+      if (res.canceled || res.selection === 1) return openTransferMenu(player);
+      const r = transferEmeralds(player, to, qty);
+      if (!r.ok) player.sendMessage(r.reason === "over_daily_cap" ? t(lang, STR.transferOverCapMsg, r.remaining) : t(lang, STR.transferFailMsg));
+      else {
+        player.sendMessage(t(lang, STR.transferDoneMsg, to.name, r.amount));
+        try { to.sendMessage(t(getLang(to), STR.transferReceivedMsg, player.name, r.amount)); } catch (e) { /* 相手が抜けた */ }
+      }
+      openBankingMenu(player);
+    }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
 // 株の売買と同じ「数量を±で調整してから確定する」方式の預け入れ画面（文言は銀行のまま）
