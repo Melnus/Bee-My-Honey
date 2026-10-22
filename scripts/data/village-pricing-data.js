@@ -28,6 +28,8 @@ export const CRAFT_DEFAULT_PER_DAY = 640;
 // (0.5 = 2日に1個)。レシピで作れない品(モブドロップ・ダンジョン産・ボス産)はここで入手ペースを持つ。
 // TODO: 値は全て暫定。実際の希少性バランスを見て調整すること(dev/pricing-settings.md §4 に一覧)。
 export const GATHER_RATE_OVERRIDES = {
+  // ---- 廃棄物(モブファームで大量に出る。村人の取引レート32個→1Eに合わせて基準1/32E) ----
+  "minecraft:rotten_flesh": 384,
   // ---- 鉱石・宝石(採掘) ----
   "minecraft:diamond": 8,
   "minecraft:emerald": 8,

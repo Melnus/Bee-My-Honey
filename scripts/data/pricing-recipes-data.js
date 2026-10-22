@@ -46,7 +46,7 @@ const PLAIN_GATHER = [
   "raw_iron", "raw_copper", "raw_gold", "ancient_debris", "coal", "flint", "obsidian", "crying_obsidian",
   "amethyst_shard", "netherrack", "mud", "blackstone", "end_stone",
   // 農作物・植物
-  "wheat", "beetroot", "dandelion", "poppy", "cornflower", "allium", "sunflower", "oxeye_daisy", "kelp", "bamboo",
+  "wheat", "potato", "carrot", "melon_slice", "beetroot", "dandelion", "poppy", "cornflower", "allium", "sunflower", "oxeye_daisy", "kelp", "bamboo",
   "sugar_cane", "cactus", "cocoa_beans", "pumpkin", "nether_wart", "sweet_berries", "glow_berries", "apple",
   "big_dripleaf", "small_dripleaf", "spore_blossom", "sulfur_spike", "pointed_dripstone", "sea_pickle",
   "chorus_fruit", "chorus_flower", "resin_clump",
@@ -80,6 +80,19 @@ PRICING_RECIPES[M("netherite_scrap")] = smelt("blast_furnace", M("ancient_debris
 PRICING_RECIPES[M("popped_chorus_fruit")] = smelt("furnace", M("chorus_fruit"));
 PRICING_RECIPES[M("resin_brick")] = smelt("furnace", M("resin_clump"));
 PRICING_RECIPES[M("dried_kelp")] = smelt("smoker", M("kelp")); // 保険の支給品(insurance.js)
+
+// ---- 村・会社の入荷/出荷メモ用(dev/village-company-flow-spec.md §3) ----
+// 砂糖: サトウキビ1本 → 砂糖1個
+PRICING_RECIPES[M("sugar")] = craft([[M("sugar_cane"), 1]]);
+// 骨粉: コンポスターの最高効率の入力から換算(確率65%の花 → 7段階で約11個。昆布30%は24個、麦50%は14個、干草・パン85%は加工費で割高、ケーキ類100%も割高)。骨経由は骨ファーム不在で安すぎるため使わない
+PRICING_RECIPES[M("bone_meal")] = craft([[M("dandelion"), 11]]);
+// 加工食品: 原料の原価 + 手間賃(スモーカー/クラフト)
+PRICING_RECIPES[M("bread")] = craft([[M("wheat"), 3]]);
+PRICING_RECIPES[M("pumpkin_pie")] = craft([[M("pumpkin"), 1], [M("sugar"), 1], [M("egg"), 1]]);
+PRICING_RECIPES[M("cooked_porkchop")] = smelt("smoker", M("porkchop"));
+PRICING_RECIPES[M("cooked_chicken")] = smelt("smoker", M("chicken"));
+PRICING_RECIPES[M("cooked_cod")] = smelt("smoker", M("cod"));
+PRICING_RECIPES[M("cooked_salmon")] = smelt("smoker", M("salmon"));
 
 // ---- 基本クラフト素材 ----
 PRICING_RECIPES[M("oak_planks")] = craft([[M("oak_log"), 1]], { yield: 4 });

@@ -202,7 +202,37 @@ export const LABOR_ITEM_NAMES = {
   piston: { ja: "ピストン", en: "Piston" },
   compass: { ja: "コンパス", en: "Compass" },
   clock: { ja: "時計", en: "Clock" },
-  hopper: { ja: "ホッパー", en: "Hopper" }
+  hopper: { ja: "ホッパー", en: "Hopper" },
+  // ---- 村・会社の入荷/出荷(economy/village-demand.js) ----
+  melon_slice: { ja: "スイカ", en: "Melon Slice" },
+  sweet_berries: { ja: "スイートベリー", en: "Sweet Berries" },
+  porkchop: { ja: "生の豚肉", en: "Raw Porkchop" },
+  chicken: { ja: "生の鶏肉", en: "Raw Chicken" },
+  rabbit: { ja: "生のウサギ肉", en: "Raw Rabbit" },
+  cod: { ja: "生のタラ", en: "Raw Cod" },
+  salmon: { ja: "生のサケ", en: "Raw Salmon" },
+  oak_sapling: { ja: "オークの苗木", en: "Oak Sapling" },
+  spruce_sapling: { ja: "マツの苗木", en: "Spruce Sapling" },
+  birch_sapling: { ja: "シラカバの苗木", en: "Birch Sapling" },
+  stick: { ja: "棒", en: "Stick" },
+  feather: { ja: "羽根", en: "Feather" },
+  white_wool: { ja: "羊毛", en: "Wool" },
+  charcoal: { ja: "木炭", en: "Charcoal" },
+  bone_meal: { ja: "骨粉", en: "Bone Meal" },
+  string: { ja: "糸", en: "String" },
+  bread: { ja: "パン", en: "Bread" },
+  pumpkin_pie: { ja: "パンプキンパイ", en: "Pumpkin Pie" },
+  cooked_porkchop: { ja: "焼き豚", en: "Cooked Porkchop" },
+  cooked_chicken: { ja: "焼き鶏肉", en: "Cooked Chicken" },
+  cooked_cod: { ja: "焼きタラ", en: "Cooked Cod" },
+  cooked_salmon: { ja: "焼きサケ", en: "Cooked Salmon" },
+  iron_ingot: { ja: "鉄インゴット", en: "Iron Ingot" },
+  copper_ingot: { ja: "銅インゴット", en: "Copper Ingot" },
+  gold_ingot: { ja: "金インゴット", en: "Gold Ingot" },
+  oak_log: { ja: "オークの原木", en: "Oak Log" },
+  spruce_log: { ja: "マツの原木", en: "Spruce Log" },
+  birch_log: { ja: "シラカバの原木", en: "Birch Log" },
+  sugar: { ja: "砂糖", en: "Sugar" }
 };
 
 // ---- ライセンス対象バイオームの表示名 ----
