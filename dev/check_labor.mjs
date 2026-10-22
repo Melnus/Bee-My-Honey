@@ -25,6 +25,7 @@ register("data:text/javascript," + encodeURIComponent(`
 const root = path.resolve(process.argv[2] ?? "scripts");
 const imp = (rel) => import(pathToFileURL(path.join(root, rel)).href);
 const QB = await imp("economy/quest-board.js");
+const TC = await imp("economy/tutorial-chain.js");
 const LB = await imp("economy/labor.js");
 const FA = await imp("economy/facility.js");
 const H = await imp("economy/hrmhrm.js");
@@ -164,6 +165,42 @@ r = QB.completeFirstJob(fay);
 if (!r.ok || fay.dropped.length !== 1) fail("持ち物いっぱいなら足元に落とす");
 // 受注の件数には数えない
 eq(QB.getActiveClaims(carol).length, 0, "初回の仕事は受注の件数に数えない");
+
+
+// ---- 6b. 導入クエスト(チェーン) ----
+{
+  const N = TC.TUTORIAL_STEPS.length;
+  eq(TC.isTutorialActive(alice), false, "実績のある人には導入クエストを出さない");
+  const gus = mkNewbie("gus");
+  eq(TC.isTutorialActive(gus), true, "新しい人には出る");
+  eq(TC.getTutorialProgress(gus), 0, "最初は0");
+  eq(TC.getCurrentTutorialStep(gus).id, "first_job", "最初のステップは初めてのアルバイト");
+  let tr = TC.completeTutorialStep(gus);
+  if (!tr.ok || gus.given.length !== 1) fail("1つ目: シュルカーが渡り、1つ進む: " + JSON.stringify(tr));
+  eq(TC.getTutorialProgress(gus), 1, "1つ進んだ");
+  eq(TC.getCurrentTutorialStep(gus).id, "board", "2つ目は掲示板のしくみ");
+  tr = TC.completeTutorialStep(gus); eq(tr.ok, true, "説明だけのステップは報告で進む");
+  eq(TC.getCurrentTutorialStep(gus).id, "first_delivery", "3つ目は初めての納品");
+  tr = TC.completeTutorialStep(gus); eq(tr.reason, "notYet", "納品していなければ進めない");
+  eq(TC.getTutorialProgress(gus), 2, "進まない");
+  // 実際に納品した記録(履歴書の実績)を作ると進める
+  const resume = LB.getOrCreatePlayerResume(gus, "unqualified");
+  LB.advancePlayerResume(gus, "unqualified", "gather_basic");
+  eq(QB.hasDeliveredQuest(gus), true, "納品の実績が付く");
+  tr = TC.completeTutorialStep(gus); eq(tr.ok, true, "納品後は進める");
+  eq(TC.isTutorialActive(gus), true, "仕事の実績があっても、1つ以上進めていれば続けて出る");
+  tr = TC.completeTutorialStep(gus);
+  if (!tr.ok || !tr.finished) fail("最後のステップで完了: " + JSON.stringify(tr));
+  eq(TC.isTutorialActive(gus), false, "終わったら欄ごと消える");
+  eq(TC.completeTutorialStep(gus).reason, "notActive", "終わったあとは進められない");
+  eq(gus.given.length, 1, "シュルカーは1個だけ");
+  // 前の版で初めてのアルバイトだけ終えている人は、1つ済みとして数える
+  const hal = mkNewbie("hal"); hal.setDynamicProperty("labor_first_job_done", 1);
+  eq(TC.getTutorialProgress(hal), 1, "旧版の完了は1つ済み"); eq(TC.getCurrentTutorialStep(hal).id, "board", "続きから");
+  // 資格・派遣・クエストの実績があって未着手の人には出さない(carol は初回の仕事を済ませただけ=進行1)
+  eq(TC.getTutorialProgress(carol), 1, "carol は初回の仕事の完了で1");
+  eq(QB.getIssuerBoard("village").length + QB.getIssuerBoard("company").length, 0, "村・会社の掲示板は今は空");
+}
 
 // ---- 5. プール ----
 store.delete("hrmhrm_pool");
