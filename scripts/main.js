@@ -9,9 +9,11 @@ import { startPriceLevelScriptEvent } from "./economy/price-level.js";
 import { startMigrationOnSpawn } from "./economy/migration.js";
 import { startPolicyScriptEvent } from "./economy/policy.js";
 import { startHrmhrm } from "./economy/hrmhrm.js";
+import { startLoanMarket } from "./economy/loan-market.js";
 import { startDevBankScriptEvent } from "./economy/dev-bank.js";
 import { startInsuranceDeathWatch } from "./economy/insurance.js";
 import { startFreshnessPatrol } from "./economy/freshness.js";
+import { startCoreGuard } from "./economy/core-guard.js";
 
 import { hasFlowerPotAbove, summonWanderingTrader, startTraderTetherLoop } from "./trader/wandering-trader.js";
 
@@ -36,10 +38,14 @@ startWeeklyMarketCycle();
 startMigrationOnSpawn(); // 既存ワールドの金額換算(利息の付与より先に登録すること)
 startBankInterestOnSpawn();
 startDevBankScriptEvent(); // 管理用: /scriptevent bmh:devbank で開発銀行機構の判断の履歴を表示
+startLoanMarket(); // 借入依頼の掲示板。貸し手への返済の配達(ログイン時)
 startHrmhrm(); // HRMHRMの会計と自動運用。管理用: /scriptevent bmh:account [hrmhrm|list]
 startPolicyScriptEvent(); // 管理用: /scriptevent bmh:policy list|get|set|reset|history(金融政策のパラメータ)
 startPriceLevelScriptEvent(); // 管理用: /scriptevent bmh:pricelevel [インフレ指数] で物価水準を表示・変更
 startLedgerScriptEvent(); // 管理用: /scriptevent bmh:ledger [週数] でエメラルド発行台帳の集計を表示
+
+// 法人テンプレート: 鐘=村 / ロードストーン=会社 の登記・固定・日次の保守。管理用: /scriptevent bmh:core list|info|dissolve|purge
+startCoreGuard();
 
 // 食品の鮮度(在庫側): プレイヤーのインベントリを5秒ごとに走査し、鮮度のスタンプ(loreに埋め込み)を更新。期限切れは腐った肉に変換
 startFreshnessPatrol();
