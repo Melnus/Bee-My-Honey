@@ -2,12 +2,47 @@
 
 All notable changes to Bee My Honey are listed here, newest first.
 
-- **Stable release:** 0.3.3
-- **Latest release:** 0.4.5
+- **Stable release:** 0.4.5
+- **Latest release:** 0.5.3
 
 Versions 0.1.1 to 0.3.3 were summarized from the project's development notes. 0.3.2 was an internal snapshot and was never released.
 
 ---
+
+## 0.5.3(0.4.6-0.5.3)
+
+### Added
+- **Corporate template: villages and companies.** Hold a Glow Ink Sac and interact with a **bell** to register a village (free; name and head are random) or a **lodestone** to register a company (you choose the name, up to 10 characters). The registration creates an identity (6-character ID) with its own account. A company costs 15,625 x price level (about 1,000,000 E at the start), paid to HRMHRM and not refunded; one company per person. A village cannot overlap another village's area (+-64 blocks horizontally, +-32 vertically).
+- **Management menu** (interact with the registered block): Personnel / Accounting / Facilities / Inventory / Contracts / Management. Personnel works now: a village shows its population (counted daily while a player is nearby); a company has a roster, applications, hire / decline, and leaving. While the president is offline, members can hire and decline on their behalf (nothing else). The other four buttons are placeholders.
+- **Core blocks are locked.** A registered bell or lodestone cannot be broken and survives explosions; if something removes it (commands), it is restored within about 10 seconds. It becomes breakable again once the registration is dissolved.
+- **Dissolution = liquidation.** Management -> Dissolve shows an estimate first: cash plus the bank's purchase of physical assets (65% of market value; 60% when forced), minus liabilities. Assets go to the bank (HRMHRM), not the market; a positive result is paid to the president; a shortfall becomes a loss for the bank. Dissolving a company costs the president 20% of their credit score and a 14-day wait before registering another (forced: 40% and 28 days). If the president is offline the payout and penalty are applied when they next log in.
+- **Automatic dissolution.** A company with no members whose president has been away for 30 days, or a company with an open intervention case, is force-dissolved through the same liquidation. A village whose measured population stays at 0 for 4 weeks is deregistered (days with nobody nearby are not measured).
+- **Virtual facilities, inventory and contracts.** Every company owns three virtual facilities (Farm, Mine, Factory) at no extra cost; they appear next to HRMHRM's as dispatch destinations in the Owners Club. Output from villagers dispatched to a company facility goes into that company's inventory. At each weekly close, whatever exceeds `pool_keep_per_item` of an item is sold at the current price into the company account. Management -> Inventory shows the stock; Contracts shows dispatches in progress and recent results (received / accident); Accounting shows cash, liabilities, net worth and the last four weeks. If a company dissolves, its stock is bought by the bank and a villager still dispatched there returns with no output ("facility closed"). Price engine: rotten flesh base set to 1/32E (matches the villager rate); registered potato, carrot, melon slice, sugar, bone meal (priced from the most efficient composter input), bread, pumpkin pie and cooked pork/chicken/cod/salmon. Company facilities never produce gold or diamond (only HRMHRM's mine does). Real-area facilities (the Facilities button) come in a later update.
+- **Staff Service reorganized into boards.** Staff Service now opens a menu: **Introductory Quests** (a short chain that disappears when finished), **Open Jobs** (no license), **Licensed Jobs** (Nether / Underwater / End), **Village Quests** and **Company Quests** (separate boards; empty for now, requests arrive in a later update). Claimed quests stay pinned at the top of their own board, and the detail screens return to the board you came from.
+- **Introductory quest chain.** 1) Your First Part-time Job (report in, receive one shulker box, as before), 2) How the Board Works, 3) Your First Delivery (finish one real delivery to report), 4) Licenses and Dispatch. Players who already have work history and have not started the chain never see it; players who only finished the first job in an earlier version continue from step 2. Steps live in a data table (`economy/tutorial-chain.js`).
+- **Village requests (goods wanted by villages).** *Staff Service -> Village Quests* now lists today's needs for the nearest villages: each village requests 3 items a day (wheat, potatoes, carrots, melon, berries, raw meat/fish, saplings, sticks, feathers, wool, raw iron/copper, charcoal, bone meal, rotten flesh), in proportion to its population. Pick a quantity, deliver to a chest near the lectern, and the village pays from its own funds. When the day's quota is taken the board says the village storehouse is full. Prices do not move (no demand pressure); unit price = base price x price level x `village_buy_ratio`. A village can only accept orders it can afford (reserved funds are tracked).
+- **Company requests.** *Staff Service -> Company Quests* lists what nearby companies are short of: raw gold (target 32), diamonds (8) and string (128) per company; only the shortfall is requested (stock above the target means no request). Same rules as village requests (quantity, reserved funds, storehouse-full). Raw gold feeds the company factory (raw gold -> gold ingots); diamonds and string go to company stock and are sold above the keep amount at the weekly close. New parameters `company_buy_ratio`, `company_need_scale`.
+- **Village requests are now per player and per day.** Each player gets their own 3 items and amounts from each village (seeded by village, day and player), sized so one player can fill them; nobody can use up a village's whole list. The default `village_need_per_pop` is now 2 (per player). Company requests stay shared (they are based on the company's stock shortage).
+- **Village and Company Quests are now two levels:** the board lists nearby villages (companies) with open requests and free funds; opening one shows today's needs with *ordered / needed* and how many you can take right now (limited by the village's funds), so a need that cannot be paid for is visible instead of looking like a bug.
+- **Village management menu now works for villages.** Inventory shows the village stock and last week's processing and shipping; Contracts becomes today's needs and the list of orders with the village's funds. Company Contracts also lists today's automatic requests and orders. All items on the boards now have Japanese names.
+- **Villages process and ship weekly.** At the weekly close, delivered goods are processed (wheat -> bread, raw meat/fish -> cooked, raw iron/copper -> ingots, saplings -> logs) with a loss (`convert_loss`) and sold below market (`village_ship_ratio`). Goods without a recipe (crops, rotten flesh) are consumed in the village. Nothing is produced without input.
+- **Factories now process stock.** A dispatch to a factory (HRMHRM or company) is processing capacity: it uses raw materials from the facility's stock (HRMHRM pool / company stock) and does nothing when there are none. Raw gold becomes gold ingots only when raw gold was delivered. Farms and mines are unchanged.
+- **New policy parameters:** `village_buy_ratio`, `village_ship_ratio`, `village_need_per_pop`, `village_items_per_day`, `convert_loss`. New ledger category `village_buy`.
+- **Safety:** delivering to a village or company that has been dissolved is refused before any items are taken; a village or company keeps at most 300 order records.
+- **Admin command** `/scriptevent bmh:core list | info <ID> | dissolve <ID> [forced] | purge confirm | fakeapply [name] | absent | present`.
+- **New ledger categories:** `core_fee` (registration fee, counted as HRMHRM revenue) and `liquidation` (payout to the president).
+- **New policy parameters:** `company_reg_fee`, `company_absent_days`, `village_empty_weeks`, `liquidation_ratio`, `forced_liquidation_ratio`, `dissolve_credit_penalty`, `forced_credit_penalty`, `dissolve_cooldown_days`, `forced_cooldown_days`. Forced dissolution can never be set milder than voluntary.
+
+---
+- 村・会社・村人の名前を日英対応: 村は作成時に日本語名と英語名(村長も)を同時に生成し、表示は閲覧者の言語に合わせる。会社の登録フォームは「自分の言語の名前」+「もう一方の言語の名前(任意)」で、重複は両方の名前で検査。村人も英語名を持つ。古いデータは日本語名から英語名を引く。(`i18n/names.js`)
+- 借入依頼の掲示板: 「借りる」から「貸し手を募集する」を出せる(審査なし・条件は信用スコアで決まる)。依頼は「貸す」の候補に、個人・村・会社の依頼として並ぶ(下に窓口の融資希望者も残る)。引き受けられると、借り手に即入金。返済は週ごとに貸し手へ届く(貸し手がオフラインなら次のログインで届く)。依頼は掲示から7日以上たった最初の週の締めで消える。
+- 村・会社の借入依頼: 自由に使える現金が目標準備金の2倍を下回ると、その日のうちに依頼を1件出す(最大2件まで借入)。毎週の締めで返済し、4週続けて払えないと貸倒れ(貸し手のスロットは空く)。依頼が消えても現金が運用の下限を割ったままなら、介入案件(loan_unfilled)として清算手続き(強制解散)へ進む。
+- 村の解散: 残った現金はHRMHRMへ戻る(代表者へは払わない)。先に、借りているローンを残りの現金から貸し手へ返す。現物・在庫は従来どおりHRMHRMへ。
+- 個人間の送金: 銀行→「送金する」。オンラインのプレイヤーへ送れる(手数料・1日の上限あり)。
+- 台帳に p2p_lend / p2p_borrow / p2p_repay / p2p_return / transfer_out / transfer_in を追加(どれも市場グループ。発行でも回収でもない。HRMHRMの債権・負債には入らない)。
+- 借入依頼・送金の制限と悪用対策: ①借りられる額は借り手の純資産(口座・外貨・株 − 借入)の半分まで、貸せる額は貸し手の資産の半分まで(`loan_borrow_asset_ratio` / `loan_lend_asset_ratio`)。依頼の一覧に借り手の資産が出る。②村・会社は、不足額をまず溜まっている在庫の物資を売って埋め(高い物から)、それでも足りない分だけを、資産の半分以内で依頼にする。③個人間ローンは、完済しても信用スコアが上がらない(サブ垢との貸し借りでの水増し対策)。④個人間の貸付は、期間+4週(`loan_lend_grace_weeks`)を過ぎても完了の知らせが無ければ貸し倒れで閉じ、貸し手のスロットが固まらない。完了通知は貸付ごとのID(lid)で照合し、別の貸付を閉じない。⑤送金は手数料2%(送り主が上乗せ。HRMHRMの収益 = 台帳 transfer_fee)と、1人1日2000E(ベース)の上限(`transfer_fee_rate` / `transfer_daily_cap_base`)。
+- 依頼IDを増え続ける番号に変更(掲示が空になっても再利用しない)。
+- 長期不在・改名への備え: 村・会社の注文の照合をプレイヤーIDで行う(ゲーマータグを変えても、受けた注文を納品できる。古い注文は名前で照合)。期限切れの注文は、まだ片付いていなくても予約額に数えない(誰も来ない村・会社で資金が固まらず、不足の判定も狂わない)。貸し手の郵便受けが溢れても、受け取るお金は残る通知へ合算して失わない。
 
 ## 0.4.5
 
