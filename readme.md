@@ -12,8 +12,8 @@ Bee My Honey is an economic simulation add-on for Minecraft Bedrock Edition. Usi
 
 | Channel | Version | Notes |
 |---|---|---|
-| Stable | **0.4.5** | Recommended for regular worlds. |
-| Latest | **0.5.3** | Adds bulk commodity trading, the Paws & Blackpots energy shop, the Fresh Market and the food freshness system (0.4.0-0.4.2), plus loan management, account history, the daily quest board and dispatch to facilities (0.4.5). Features that only exist in 0.4.x are marked **[0.4]** below. |
+| Stable | **0.4.5** | Recommended for regular worlds. Includes the 0.4.x features: bulk commodity trading, the Paws & Blackpots energy shop, the Fresh Market and food freshness (0.4.0-0.4.2), and loan management, account history, the daily quest board and dispatch to facilities (0.4.5). |
+| Latest | **0.5.3** | Everything in 0.4.5, plus the 0.5.x features: villages and companies (corporate template, 0.5.1-0.5.2), village and company requests with weekly processing and factory processing (0.5.2), and bilingual names, loan requests between players, villages and companies, and money transfers (0.5.3). Features that first appear in 0.4.x are marked **[0.4]** below, and those that first appear in 0.5.x are marked **[0.5]**. |
 
 See [CHANGELOG.md](/CHANGELOG.md) for the full history.
 
@@ -151,21 +151,21 @@ Use a Lectern with a Book.
 - **Staff Service:** four quests are posted each day, the same for everyone (one per category; licensed categories are locked until you hold the license). Claim a quest, then select it again to deliver it by container or abandon it. A claim lasts until the end of the week, and you can hold 2 at a time by default. New players get a one-off "first part-time job" that gives a shulker box. **[0.4]**
 - **Licenses:** Nether / Underwater / End licenses are earned by actually placing or breaking the relevant blocks in those places.
 - **Consultant Service:** lease villagers.
-- **Owners' Club:** register villagers as resumes and dispatch them to a facility (Farm / Mine / Factory; HRMHRM operates all three for now). The output is fixed when you sign the contract and is delivered to the facility's stock when you collect. A villager retires automatically after 3 years (1095 days) of total dispatch. 128 registered villagers maximum; accident risk rises above 100. **[0.4]**
+- **Owners' Club:** register villagers as resumes and dispatch them to a facility (Farm / Mine / Factory; HRMHRM operates all three, and each company has its own virtual set **[0.5]**). The output is fixed when you sign the contract and is delivered to the facility's stock when you collect. A villager retires automatically after 3 years (1095 days) of total dispatch. 128 registered villagers maximum; accident risk rises above 100. **[0.4]**
 - HRMHRM converts the stock above a set level into cash every week.
 
-### 13b. Villages & Companies
+### 13b. Villages & Companies **[0.5]**
 Hold a Glow Ink Sac and interact with a **Bell** to register a **village** (free) or a **Lodestone** to register a **company** (registration fee about 1,000,000 E, paid to HRMHRM; one company per player). Registered blocks are locked (they cannot be broken or blown up). Interact with the block for the management menu: Personnel / Accounting / Facilities / Inventory / Contracts / Management. A company is dissolved by liquidation (the bank buys its assets); a village is deregistered after weeks with no residents, and a company whose president has been away for a long time is dissolved automatically.
 - **Staff Service -> Village Quests:** every day each village asks every player for 3 items (amounts depend on the village's population). Pick a village, choose an item and a quantity, then put the goods in a chest near the lectern and deliver. The village pays from its own funds, so it can only accept what it can afford. Items and amounts differ per player and per day.
 - **Staff Service -> Company Quests:** companies post requests for raw materials they are short of (raw gold, diamonds, string).
 - Villages process delivered goods weekly (bread, cooked meat, ingots, logs) and sell them below market. Companies own virtual Farm / Mine / Factory facilities (shown as dispatch destinations); a Factory only processes materials that are in stock.
-- Real-area facilities ("Facilities" button) come in a later update. **[0.5.2]**
+- Real-area facilities ("Facilities" button) come in a later update.
 
-#### Loan requests & transfers
+#### Loan requests & transfers **[0.5]**
 - Besides bank loans, "Borrow" lets you post a request for a lender (no screening; the rate is higher for lower credit scores). Requests show up under "Lend"; when a lender takes one, the money arrives at once. Requests expire after about 7 days.
 - Villages and companies that run short of funds post requests to the same board. If no one lends and their cash stays below the operating floor, they go into liquidation (forced dissolution).
 - Dissolving a village returns its remaining cash to HRMHRM (outstanding loans are repaid to lenders first).
-- Bank > "Send Money" sends emeralds to online players with no fee.
+- Bank > "Send Money" sends emeralds to online players (2% fee on top, paid by the sender; 2,000 E (base) per day).
 - You can borrow up to half your net assets and lend up to half your assets per loan. Villages and companies sell their stockpiled goods first and only request the remainder. Repaying a player-to-player loan does not raise your credit score. Transfers carry a 2% fee and a daily cap.
 
 ### 14. Cold Wallet (Offline Story Codes)
