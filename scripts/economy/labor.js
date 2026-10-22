@@ -1,4 +1,5 @@
 import { getPriceLevel, scaleEInt } from "./price-level.js";
+import { pickVillagerName } from "../i18n/names.js";
 import { creditEmeralds, debitEmeralds, FLOW } from "./ledger.js";
 import { world } from "@minecraft/server";
 import {
@@ -11,7 +12,6 @@ import {
   CONSULTANT_LOSS_PENALTY_PER_DAY,
   OWNER_GRADES,
   OWNER_BASE_WAGE_PER_DAY,
-  OWNER_NAME_POOL,
   VILLAGER_FLAVOR_SKILLS,
   MAX_EMPLOYEES,
   getAccidentChance,
@@ -21,7 +21,7 @@ import {
 } from "../data/labor-data.js";
 import { getAccount, giveItem } from "./bank.js";
 import { getStockPrice } from "./market-engine.js";
-import { getFacility, rollFacilityOutput, depositToFacility } from "./facility.js";
+import { getFacility, rollFacilityOutput, depositToFacility, notifyDispatch } from "./facility.js";
 import { getPolicyParam } from "./policy.js";
 
 // ==========================================
@@ -176,7 +176,8 @@ export function registerNearbyVillagerAsEmployee(player, lecternLocation, radius
   const level = 1 + Math.floor(Math.random() * 3); // Lv1〜3でスタート
   // 村人の賃金はベース単位で保存する(支払い・表示の時に掛率を掛ける。インフレに追従するため)
   const wage = Math.round(OWNER_BASE_WAGE_PER_DAY * grade.wageMultiplier * (1 + (level - 1) * 0.2));
-  const name = OWNER_NAME_POOL[Math.floor(Math.random() * OWNER_NAME_POOL.length)];
+  const picked = pickVillagerName();
+  const name = picked.ja;
   const skillCount = 1 + Math.floor(Math.random() * 2);
   const skills = [];
   const pool = [...VILLAGER_FLAVOR_SKILLS];
@@ -187,7 +188,7 @@ export function registerNearbyVillagerAsEmployee(player, lecternLocation, radius
 
   const employee = {
     id: `e_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
-    identity: { name, tag: "villager" },
+    identity: { name, nameEn: picked.en, tag: "villager" },
     address: {
       location: locationToAddress(lecternLocation, dimension.id),
       nearestNetherGate: findNearestNetherGate(dimension, lecternLocation)
@@ -228,12 +229,14 @@ export function dispatchEmployee(player, employeeId, days, facilityId) {
   if (!facility) return { ok: false, reason: "unknownFacility" };
 
   const output = rollFacilityOutput(facility, employee.wage, days);
+  if (facility.genre === "factory" && !(output.count > 0)) return { ok: false, reason: "noInput", facility }; // 工場は原料がなければ動かない
   employee.status = "dispatched";
   employee.dispatchDays = days;
   employee.dispatchEndDay = currentGlobalDay() + days;
   employee.dispatchFacilityId = facility.id;
   employee.dispatchOutput = output;
   saveEmployees(player, employees);
+  notifyDispatch("start", facility, { key: `${player.id}:${employeeId}`, playerName: player.name, days, endDay: employee.dispatchEndDay, output });
   return { ok: true, facility, output };
 }
 
@@ -279,15 +282,19 @@ export function collectDispatch(player, employeeId) {
   const wageNow = Math.round(employee.wage * getPriceLevel()); // 1日あたりの賃金(掛率込み)
   const stockOptionsGranted = grantHrmhrmStockOptionIfEligible(player);
 
+  const facilityClosed = !facility; // 契約中に会社が解散した場合など
+  const endInfo = { key: `${player.id}:${employeeId}`, playerName: player.name, days, output };
   if (isAccident) {
     const compensation = wageNow * days + laborCost; // 事故があっても働かせていた分の人件費は発生している
-    return { ok: true, accident: true, compensation, laborCost, stockOptionsGranted, employee, retired, facility };
+    notifyDispatch("end", facility, { ...endInfo, result: "accident" });
+    return { ok: true, accident: true, compensation, laborCost, stockOptionsGranted, employee, retired, facility, facilityClosed };
   }
 
   let delivered = null;
   if (facility && output && depositToFacility(facility, output.itemId, output.count)) delivered = output;
+  notifyDispatch("end", facility, { ...endInfo, result: delivered ? "delivered" : "lost" });
   const margin = Math.max(0, wageNow * days - laborCost);
-  return { ok: true, accident: false, margin, laborCost, stockOptionsGranted, employee, retired, facility, delivered };
+  return { ok: true, accident: false, margin, laborCost, stockOptionsGranted, employee, retired, facility, delivered, facilityClosed };
 }
 
 export function removeEmployee(player, employeeId) {

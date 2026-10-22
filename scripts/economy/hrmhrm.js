@@ -7,7 +7,9 @@ import {
 } from "./account.js";
 import { emptyWeekRecord, runManagement, finalizeWeek } from "./entity-ops.js";
 import { processFundingRequests, formatDevBankReport } from "./dev-bank.js";
-import { settlePool, formatPoolReport } from "./facility.js";
+import { settlePool, formatPoolReport, settleStockFor } from "./facility.js";
+import { settleVillageStock } from "./village-demand.js";
+import { settleEntityLoans, expireRequests } from "./loan-market.js";
 
 // ==========================================
 // HRMHRMの会計と週次の運用 / HRMHRM Accounting & Weekly Run  (dev/hrmhrm-accounting.md, dev/development-bank.md)
@@ -36,7 +38,7 @@ export const HRMHRM_INITIAL = {
   cashBase: 40000,
   holdings: { gold_ingot: 50000, diamond: 20000 } // 個数(ベース価格で金約2.7万E・ダイヤ約3万E相当)
 };
-const REVENUE_OUT = ["mail_order", "prime_fee", "insurance", "labor_compensation", "labor_penalty", "card_payment"];
+const REVENUE_OUT = ["mail_order", "prime_fee", "insurance", "labor_compensation", "labor_penalty", "card_payment", "core_fee", "transfer_fee"];
 const EXPENSE_IN = ["quest_wage", "dispatch_margin", "hire_bonus", "bank_interest", "dividend"];
 const MAX_CATCH_UP_WEEKS = 52;
 
@@ -131,12 +133,36 @@ export function runHrmhrmWeekly() {
           record.actions.push({ type: "pool_sale", cash: sale.cash });
         }
       }
+      if (id !== HRMHRM_ID && acct.type === "company") {
+        // 会社の在庫: 保持数を超えた分を、HRMHRMのプールと同じ規則で換金する
+        const sale = settleStockFor(id);
+        if (sale.cash > 0) {
+          acct.cash += sale.cash;
+          record.revenue += sale.cash;
+          record.net += sale.cash;
+          record.cashDelta += sale.cash;
+          record.actions.push({ type: "pool_sale", cash: sale.cash });
+        }
+      }
+      if (acct.type === "village") {
+        // 村の在庫: 変換表のとおり加工し、出荷品を相場以下で市場へ売って口座に戻す
+        const sale = settleVillageStock(id);
+        if (sale && sale.cash > 0) {
+          acct.cash += sale.cash;
+          record.revenue += sale.cash;
+          record.net += sale.cash;
+          record.cashDelta += sale.cash;
+          record.actions.push({ type: "village_ship", cash: sale.cash });
+        }
+      }
+      if (id !== HRMHRM_ID) settleEntityLoans(acct, record); // 村・会社が借りたローンの返済(貸し手へ)
       runManagement(acct, record);
       finalizeWeek(acct, record);
       saveEntityAccount(acct);
     }
     processFundingRequests(w);
     runInterventionCheck(w);
+    expireRequests(w); // 掲示から7日以上たった借入依頼を消す(村・会社で、なお資金が下限割れなら清算手続きへ)
   }
   return to - from + 1;
 }

@@ -36,6 +36,13 @@ export const FLOW = {
   LEND_OUT: "lend_out",
   LEND_RETURN: "lend_return",
   CARD_PAYMENT: "card_payment",
+  // p2p(プレイヤー同士・プレイヤー↔村/会社のローン。お金の移動であり発行ではない)
+  P2P_LEND: "p2p_lend",
+  P2P_BORROW: "p2p_borrow",
+  P2P_REPAY: "p2p_repay",
+  P2P_RETURN: "p2p_return",
+  TRANSFER_OUT: "transfer_out", // プレイヤー同士の送金(お金の移動。発行でも回収でもない)
+  TRANSFER_IN: "transfer_in",
   // market
   COMMODITY_BUY: "commodity_buy",
   COMMODITY_SELL: "commodity_sell",
@@ -47,10 +54,14 @@ export const FLOW = {
   STOCK_SELL: "stock_sell",
   FUTURES_MARGIN: "futures_margin",
   FUTURES_SETTLE: "futures_settle",
+  LIQUIDATION: "liquidation", // 法人・村の清算で、残った分が代表へ払われる(資産との交換。発行ではない)
+  VILLAGE_BUY: "village_buy", // 村の入荷(納品の代金を村の口座から受け取る。資産との交換)
   // spend
   MAIL_ORDER: "mail_order",
   PRIME_FEE: "prime_fee",
   INSURANCE: "insurance",
+  CORE_FEE: "core_fee", // 法人の登録料(HRMHRMの収益)
+  TRANSFER_FEE: "transfer_fee", // 送金の手数料(HRMHRMの収益)
   // penalty
   LABOR_COMPENSATION: "labor_compensation",
   LABOR_PENALTY: "labor_penalty",
@@ -65,8 +76,8 @@ export const GROUP_OF = {
   loan_disbursed: "credit", loan_repaid: "credit", lend_out: "credit", lend_return: "credit", card_payment: "credit",
   commodity_buy: "market", commodity_sell: "market", bulk_buy: "market", bulk_sell: "market",
   forex_buy: "market", forex_sell: "market", stock_buy: "market", stock_sell: "market",
-  futures_margin: "market", futures_settle: "market",
-  mail_order: "spend", prime_fee: "spend", insurance: "spend",
+  futures_margin: "market", futures_settle: "market", liquidation: "market", village_buy: "market", p2p_lend: "market", p2p_borrow: "market", p2p_repay: "market", p2p_return: "market", transfer_out: "market", transfer_in: "market",
+  mail_order: "spend", prime_fee: "spend", insurance: "spend", core_fee: "spend", transfer_fee: "spend",
   labor_compensation: "penalty", labor_penalty: "penalty",
   deposit: "conversion", withdraw: "conversion", migration: "conversion"
 };

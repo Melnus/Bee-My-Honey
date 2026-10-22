@@ -99,6 +99,114 @@ export const POLICY_PARAMS = {
     unit: "ratio", default: 1, min: 0.1, max: 1.5, maxStep: 0.1, cooldownWeeks: 1,
     label: { ja: "プール: 換金の掛け率", en: "Pool: sale ratio" },
     desc: { ja: "換金額 = その時の売値(基準価格 × 掛率) × この掛け率", en: "Cash = current selling price (base price x price level) x this ratio" }
+  },
+  // ---- 村の入荷・出荷(village-demand.js) ----
+  village_buy_ratio: {
+    unit: "ratio", default: 1, min: 0.5, max: 1.5, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "村: 入荷の単価の掛け率", en: "Village: purchase price ratio" },
+    desc: { ja: "村が納品物を買う1個の単価 = 基準価格 × 掛率 × この掛け率", en: "Unit price villages pay = base price x price level x this ratio" }
+  },
+  village_ship_ratio: {
+    unit: "ratio", default: 0.8, min: 0.3, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "村: 出荷(市場売却)の掛け率", en: "Village: shipping (market sale) ratio" },
+    desc: { ja: "村が加工品を売る単価 = 基準価格 × 掛率 × この掛け率。取引所の相場以下にすること", en: "Villages sell processed goods at base price x price level x this ratio" }
+  },
+  village_need_per_pop: {
+    unit: "count", default: 2, min: 0.5, max: 32, maxStep: 1, cooldownWeeks: 1,
+    label: { ja: "村: 人口1人あたりの1日の必要数(プレイヤー1人あたり)", en: "Village: daily need per resident (per player)" },
+    desc: { ja: "プレイヤーごとの日ごとの必要数(枠) = 人口 × この値 × 品目の係数 × ばらつき。品目も量も、人ごと・日ごとに変わる", en: "Per-player daily need = population x this value x item weight x variation. Items and amounts differ per player and per day" }
+  },
+  village_items_per_day: {
+    unit: "count", default: 3, min: 1, max: 6, maxStep: 1, cooldownWeeks: 1,
+    label: { ja: "村: 1日に出す品目数", en: "Village: items requested per day" },
+    desc: { ja: "村ごとに、毎日この数の品目の必要数を出す", en: "Number of items each village requests per day" }
+  },
+  company_buy_ratio: {
+    unit: "ratio", default: 1, min: 0.5, max: 1.5, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "会社: 入荷(自動依頼)の単価の掛け率", en: "Company: purchase price ratio" },
+    desc: { ja: "会社の自動依頼の単価 = 基準価格 × 掛率 × この掛け率", en: "Unit price of automatic company requests = base price x price level x this ratio" }
+  },
+  company_need_scale: {
+    unit: "ratio", default: 1, min: 0.1, max: 4, maxStep: 0.5, cooldownWeeks: 1,
+    label: { ja: "会社: 自動依頼の量の倍率", en: "Company: request volume scale" },
+    desc: { ja: "会社の在庫の目標数(金の原石32・ダイヤ8・糸128)にかける倍率。足りない分だけ依頼になる", en: "Multiplier on each company's stock targets; only the shortfall is requested" }
+  },
+  convert_loss: {
+    unit: "ratio", default: 0.8, min: 0.3, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "村: 加工の変換比(損失込み)", en: "Village: processing yield" },
+    desc: { ja: "加工の出来高 = 変換表の数 × この値(切り捨て)。1にすると損失なし", en: "Output = recipe output x this value (rounded down)" }
+  },
+  // ---- 個人間ローン・送金(loan-market.js / transfer.js) ----
+  loan_borrow_asset_ratio: {
+    unit: "ratio", default: 0.5, min: 0.1, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "個人間ローン: 借りられる額の資産比", en: "P2P loans: borrow limit (share of assets)" },
+    desc: { ja: "借入依頼の金額は、借り手の純資産(口座・外貨・株 − 借入。村・会社は純資産+在庫)のこの割合まで", en: "A request may be at most this share of the borrower's net assets (entities: equity + stock)" }
+  },
+  loan_lend_asset_ratio: {
+    unit: "ratio", default: 0.5, min: 0.1, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "個人間ローン: 貸せる額の資産比", en: "P2P loans: lend limit (share of assets)" },
+    desc: { ja: "貸す額は、貸し手の資産(口座・外貨・株)のこの割合まで。全財産を貸し込めない", en: "A lender may lend at most this share of their assets in one loan" }
+  },
+  loan_lend_grace_weeks: {
+    unit: "weeks", default: 4, min: 0, max: 12, maxStep: 2, cooldownWeeks: 1,
+    label: { ja: "個人間ローン: 貸付の猶予(週)", en: "P2P loans: lending grace (weeks)" },
+    desc: { ja: "貸付の期間+この週数を過ぎても完了の知らせが無ければ、貸し倒れとして貸し手のスロットを空ける", en: "If a loan is not settled this many weeks after its term, it is written off and the lender's slot is freed" }
+  },
+  transfer_fee_rate: {
+    unit: "ratio", default: 0.02, min: 0, max: 0.1, maxStep: 0.01, cooldownWeeks: 1,
+    label: { ja: "送金: 手数料の割合", en: "Transfer: fee rate" },
+    desc: { ja: "送金額に対する手数料。送り主が上乗せで払い、HRMHRMの収益になる", en: "Fee on top of the amount sent, paid by the sender to HRMHRM" }
+  },
+  transfer_daily_cap_base: {
+    unit: "base", default: 2000, min: 100, max: 100000, maxStep: 1000, cooldownWeeks: 1,
+    label: { ja: "送金: 1日の上限(ベース単位E)", en: "Transfer: daily cap (base E)" },
+    desc: { ja: "1人が1日に送れる合計。実際の金額は掛率を掛ける", en: "Total one player can send per day; multiplied by the price level" }
+  },
+  // ---- 法人・村(法人テンプレート。core-registry.js) ----
+  company_reg_fee: {
+    unit: "base", default: 15625, min: 0, max: 100000, maxStep: 5000, cooldownWeeks: 1,
+    label: { ja: "法人: 会社の登録料(ベース単位E)", en: "Corporate: company registration fee (base E)" },
+    desc: { ja: "会社を登記する料金。払い先はHRMHRM。返金なし。実際の金額は掛率を掛ける(15625 × 64 = 100万E)", en: "Fee to register a company, paid to HRMHRM, non-refundable. Multiplied by the price level" }
+  },
+  company_absent_days: {
+    unit: "days", default: 30, min: 7, max: 120, maxStep: 7, cooldownWeeks: 1,
+    label: { ja: "法人: 1人会社が消えるまでの不在日数", en: "Corporate: absent days before a one-person company is dissolved" },
+    desc: { ja: "メンバーがいない会社の社長が、この日数を超えて不在だと強制解散になる", en: "A company with no members is force-dissolved once its president has been absent this long" }
+  },
+  village_empty_weeks: {
+    unit: "weeks", default: 4, min: 1, max: 26, maxStep: 2, cooldownWeeks: 1,
+    label: { ja: "法人: 村の人口0が続く週数", en: "Corporate: weeks of zero population before a village is deregistered" },
+    desc: { ja: "測れた日が全て人口0のまま、この週数が続くと村の登記を抹消する", en: "A village is deregistered once every measured day shows zero population for this many weeks" }
+  },
+  liquidation_ratio: {
+    unit: "ratio", default: 0.65, min: 0.5, max: 0.8, maxStep: 0.05, cooldownWeeks: 1,
+    label: { ja: "法人: 任意解散の資産買取率", en: "Corporate: bank buy rate on voluntary dissolution" },
+    desc: { ja: "解散の清算で、銀行が現物資産を時価のこの割合で買い取る", en: "In a liquidation the bank buys physical assets at this fraction of market value" }
+  },
+  forced_liquidation_ratio: {
+    unit: "ratio", default: 0.6, min: 0.5, max: 0.8, maxStep: 0.05, cooldownWeeks: 1,
+    label: { ja: "法人: 強制解散の資産買取率", en: "Corporate: bank buy rate on forced dissolution" },
+    desc: { ja: "強制解散の清算での買取率。任意解散の買取率以下にすること", en: "Buy rate in a forced dissolution; keep at or below the voluntary rate" }
+  },
+  dissolve_credit_penalty: {
+    unit: "ratio", default: 0.2, min: 0, max: 0.5, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "法人: 任意解散の信用スコア減点(割合)", en: "Corporate: credit penalty on voluntary dissolution (fraction)" },
+    desc: { ja: "社長の信用スコアを、現在値のこの割合だけ下げる", en: "Lowers the president's credit score by this fraction of the current value" }
+  },
+  forced_credit_penalty: {
+    unit: "ratio", default: 0.4, min: 0, max: 0.8, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "法人: 強制解散の信用スコア減点(割合)", en: "Corporate: credit penalty on forced dissolution (fraction)" },
+    desc: { ja: "強制解散での減点。任意解散の減点以上にすること", en: "Credit penalty on forced dissolution; keep at or above the voluntary one" }
+  },
+  dissolve_cooldown_days: {
+    unit: "days", default: 14, min: 0, max: 60, maxStep: 7, cooldownWeeks: 1,
+    label: { ja: "法人: 任意解散後の再登録の待ち日数", en: "Corporate: re-registration wait after voluntary dissolution (days)" },
+    desc: { ja: "任意解散した社長が、新しい会社を登記できるまでの日数", en: "Days before a president can register a new company after a voluntary dissolution" }
+  },
+  forced_cooldown_days: {
+    unit: "days", default: 28, min: 0, max: 120, maxStep: 7, cooldownWeeks: 1,
+    label: { ja: "法人: 強制解散後の再登録の待ち日数", en: "Corporate: re-registration wait after forced dissolution (days)" },
+    desc: { ja: "強制解散された社長が、新しい会社を登記できるまでの日数", en: "Days before a president can register a new company after a forced dissolution" }
   }
 };
 
@@ -108,6 +216,12 @@ const CONSTRAINTS = [
     id: "card_covers_loans",
     check: (v) => v.card_spread >= v.loan_base_spread + 5 * v.loan_spread_per_difficulty - 1e-12,
     message: { ja: "カードの上乗せは、最も高いローンの上乗せ(基本+難易度5段階分)以上にしてください。", en: "Card spread must be at least the highest loan spread." }
+  },
+  // 原則: 任意解散のペナルティ < 強制解散のペナルティ(自分から畳んだほうが得になるように)
+  {
+    id: "forced_not_milder",
+    check: (v) => v.forced_liquidation_ratio <= v.liquidation_ratio + 1e-12 && v.forced_credit_penalty >= v.dissolve_credit_penalty - 1e-12 && v.forced_cooldown_days >= v.dissolve_cooldown_days,
+    message: { ja: "強制解散は、任意解散より軽くしないでください(買取率は同じか低く、信用の減点と待ち日数は同じか大きく)。", en: "Forced dissolution must not be milder than voluntary (buy rate equal or lower; credit penalty and wait equal or higher)." }
   }
 ];
 

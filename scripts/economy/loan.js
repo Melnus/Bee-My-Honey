@@ -20,7 +20,7 @@ export const LOAN_TIERS = [
 ];
 
 // 審査に必要な最低スコア（難易度1〜5に対応）
-function requiredScore(difficulty) {
+export function requiredScore(difficulty) {
   return 380 + difficulty * 40; // 難易度1:420 〜 難易度5:580
 }
 
@@ -30,8 +30,19 @@ function weeklyInterestRate(difficulty, score) {
 }
 
 // 難易度に応じた返済期間(週)
-function termWeeks(difficulty) {
+export function termWeeks(difficulty) {
   return 4 + difficulty * 2; // 6〜14週
+}
+
+// ---------- p2pローンへの接続(loan-market.js が登録する。循環importを避けるため) ----------
+// 借り手の cr_loan_lender に貸し手のIDが入っているローンは、返済が銀行ではなく貸し手へ届く。
+let p2p = null;
+export function registerP2pHooks(h) { p2p = h; }
+const lenderOf = (player) => player.getDynamicProperty("cr_loan_lender");
+const repayFlow = (player) => (lenderOf(player) ? FLOW.P2P_REPAY : FLOW.LOAN_REPAID);
+function payLender(player, amount, weeksLeft) {
+  const id = lenderOf(player);
+  if (id && p2p) p2p.pay(id, player.name, amount, weeksLeft, player.getDynamicProperty("cr_loan_lid"));
 }
 
 // ---------- 借入 (プレイヤー→銀行) ----------
@@ -73,6 +84,7 @@ export function applyForLoan(player, tierIndex) {
 // 週次の自動引き落とし。すべてのオンラインプレイヤーに対して呼ぶ。
 export function applyLoanBilling() {
   for (const player of world.getPlayers()) {
+    if (p2p?.tick) p2p.tick(player); // 期間+猶予を過ぎた個人間の貸付は貸し倒れで閉じる
     // 融資中(貸し手側)のポジションも同じ週次サイクルで満期を進める
     if (hasActiveLending(player)) {
       const result = tickLendingWeek(player);
@@ -94,9 +106,10 @@ export function applyLoanBilling() {
     const pay = Math.min(payment, balance);
 
     if (acc.emeralds >= pay) {
-      debitEmeralds(player, pay, FLOW.LOAN_REPAID);
+      debitEmeralds(player, pay, repayFlow(player));
       const newBalance = balance - pay;
       const weeksLeft = Math.max(0, (player.getDynamicProperty("cr_loan_weeks_left") ?? 1) - 1);
+      payLender(player, pay, weeksLeft);
       const { principal } = getLoanSplit(player); // 引き落とし前の元本の残り
       const principalPaid = balance > 0 ? Math.round(pay * (principal / balance)) : 0;
       player.setDynamicProperty("cr_loan_principal_left", Math.max(0, principal - principalPaid));
@@ -144,7 +157,8 @@ export function repayLoanEarly(player, includeInterest) {
   const acc = getAccount(player);
   if (acc.emeralds < pay) return { ok: false, reason: "insufficient_funds", need: pay, shortage: pay - acc.emeralds };
 
-  debitEmeralds(player, pay, FLOW.LOAN_REPAID);
+  debitEmeralds(player, pay, repayFlow(player));
+  payLender(player, pay, player.getDynamicProperty("cr_loan_weeks_left") ?? 0);
   const newBalance = balance - pay;
   if (newBalance <= 0) {
     finishLoan(player, true);
@@ -160,6 +174,13 @@ export function repayLoanEarly(player, includeInterest) {
 }
 
 function finishLoan(player, paidOff) {
+  const lender = lenderOf(player);
+  if (lender) {
+    if (p2p) p2p.close(lender, player.name, paidOff, player.getDynamicProperty("cr_loan_lid"));
+    player.setDynamicProperty("cr_loan_lender", undefined);
+    player.setDynamicProperty("cr_loan_lender_name", undefined);
+    player.setDynamicProperty("cr_loan_lid", undefined);
+  }
   player.setDynamicProperty("cr_loan_balance", 0);
   player.setDynamicProperty("cr_loan_weekly_payment", 0);
   player.setDynamicProperty("cr_loan_weeks_left", 0);
@@ -167,9 +188,14 @@ function finishLoan(player, paidOff) {
   player.setDynamicProperty("cr_loan_overdue_streak", 0);
   clearOverdue(player);
   if (paidOff) {
-    player.setDynamicProperty("cr_loan_paid_count", (player.getDynamicProperty("cr_loan_paid_count") ?? 0) + 1);
-    adjustCredit(player, "loanPaidOff");
-    player.sendMessage(`§a[ローン] 完済しました！信用情報が改善しました。`);
+    if (lender) {
+      // 個人間のローンは、完済しても信用スコアは上がらない(自分のサブ垢との貸し借りでスコアを水増しできないように)
+      player.sendMessage(`§a[ローン] 完済しました。(個人間のローンは信用スコアに加点されません)`);
+    } else {
+      player.setDynamicProperty("cr_loan_paid_count", (player.getDynamicProperty("cr_loan_paid_count") ?? 0) + 1);
+      adjustCredit(player, "loanPaidOff");
+      player.sendMessage(`§a[ローン] 完済しました！信用情報が改善しました。`);
+    }
   }
 }
 
@@ -224,6 +250,8 @@ export function lendToBorrower(player, candidate) {
   player.setDynamicProperty("loan_lent_rate", candidate.rate);
   player.setDynamicProperty("loan_lent_prob", Math.round(candidate.repayProbability * 100));
   player.setDynamicProperty("loan_lent_name", candidate.name);
+  player.setDynamicProperty("loan_lent_name_en", undefined);
+  player.setDynamicProperty("loan_lent_p2p", 0);
   return { ok: true };
 }
 
@@ -231,6 +259,7 @@ export function lendToBorrower(player, candidate) {
 // 満期に達したら resolveLending() を呼んで結果を確定させる。
 export function tickLendingWeek(player) {
   if (!hasActiveLending(player)) return null;
+  if (player.getDynamicProperty("loan_lent_p2p") === 1) return null; // 実在の借り手: 返済と完了は借り手側の処理から届く
   const weeksLeft = Math.max(0, (player.getDynamicProperty("loan_lent_weeks_left") ?? 1) - 1);
   player.setDynamicProperty("loan_lent_weeks_left", weeksLeft);
   if (weeksLeft <= 0) return resolveLending(player);
@@ -264,6 +293,7 @@ export function resolveLending(player) {
   player.setDynamicProperty("loan_lent_amount", 0);
   player.setDynamicProperty("loan_lent_weeks_left", 0);
   player.setDynamicProperty("loan_lent_original_weeks", 0);
+  player.setDynamicProperty("loan_lent_p2p", 0);
   return result;
 }
 

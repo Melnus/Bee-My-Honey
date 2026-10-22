@@ -1,6 +1,7 @@
 import { world, ItemStack } from "@minecraft/server";
 import { getPriceLevel, scaleEInt } from "./price-level.js";
 import { creditEmeralds, FLOW } from "./ledger.js";
+import { claimVillageOrder, cancelVillageOrder, completeVillageOrder, canCompleteVillageOrder } from "./village-demand.js";
 import { getPolicyParam } from "./policy.js";
 import {
   UNQUALIFIED_JOBS,
@@ -113,10 +114,52 @@ const FIRST_JOB_FLAG = "labor_first_job_done";
 const FIRST_JOB_GIFT_IDS = ["minecraft:shulker_box", "minecraft:undyed_shulker_box"];
 
 // 仕事の実績がある人(クエスト・派遣・ライセンスの進捗がある)には出さない。履歴書を開いただけ(実績ゼロ)の人には出す。
-function hasWorkHistory(player) {
+export function hasWorkHistory(player) {
   const employees = getEmployees(player);
   if (employees.some((e) => e.identity.tag === "villager" || (e.records?.length ?? 0) > 0 || Object.keys(e.licenses ?? {}).length > 0)) return true;
   return loadClaims(player).length > 0;
+}
+
+// 資格なし・資格ありを問わず、クエストを1度でも納品したことがあるか(履歴書の実績。導入クエストの「初めての納品」の判定)
+export function hasDeliveredQuest(player) {
+  return getEmployees(player).some((e) => e.identity.tag !== "villager" && (e.records?.length ?? 0) > 0);
+}
+
+// 発行者ごとの掲示(村・会社からの依頼)。村の入荷は village-demand.js の枠(getVillageBoard)。会社の依頼は次のアプデ。
+export function getIssuerBoard(issuerType) {
+  return [];
+}
+
+// ---------- 村の入荷の受注(数量つき。枠と口座は village-demand.js) ----------
+// 受注記録は通常のクエストと同じ形で、category = "village"、issuer = { type: "village", id: 村ID } が付く。
+// reason は claimVillageOrder の reason に加えて limit / alreadyClaimed / alreadyCompleted
+export function claimVillageQuest(player, coreId, itemId, qty) {
+  const day = currentGlobalDay();
+  const claims = getClaims(player);
+  const probeKey = `v_${day}_${coreId}_${itemId.replace("minecraft:", "")}`;
+  const existing = claims.find((c) => c.questId === probeKey);
+  if (existing) return { ok: false, reason: existing.state === "completed" ? "alreadyCompleted" : "alreadyClaimed" };
+  const max = getMaxActiveQuests();
+  if (claims.filter((c) => c.state === "claimed").length >= max) return { ok: false, reason: "limit", max };
+
+  const r = claimVillageOrder(player, coreId, itemId, qty, day);
+  if (!r.ok) return r;
+  const claim = {
+    questId: r.key,
+    category: r.kind,
+    jobKey: r.kind,
+    issuer: { type: r.kind, id: coreId },
+    title: { ja: `${r.villageNames.ja}への納品`, en: `Delivery to ${r.villageNames.en}` },
+    requirement: { itemId, count: r.qty },
+    reward: r.reward, // 受注時の名目額で確定(村の口座の予約と同じ額)
+    day,
+    expiresWeek: r.expiresWeek,
+    state: "claimed"
+  };
+  claims.push(claim);
+  saveClaims(player, claims);
+  registrySet(r.key, player.name, { state: "claimed", expiresWeek: claim.expiresWeek });
+  return { ok: true, claim };
 }
 
 export function isFirstJobAvailable(player) {
@@ -279,9 +322,11 @@ export function releaseQuest(player, questId) {
   const claims = getClaims(player);
   const idx = claims.findIndex((c) => c.questId === questId && c.state === "claimed");
   if (idx === -1) return { ok: false, reason: "notClaimed" };
+  const released = claims[idx];
   claims.splice(idx, 1);
   saveClaims(player, claims);
   registrySet(questId, player.name, null);
+  if (released.issuer?.type === "village" || released.issuer?.type === "company") cancelVillageOrder(released.issuer.id, questId, player.name, player.id);
   return { ok: true };
 }
 
@@ -292,12 +337,17 @@ export function deliverQuest(player, questId, lecternLocation) {
   const claims = getClaims(player);
   const claim = claims.find((c) => c.questId === questId && c.state === "claimed");
   if (!claim) return { ok: false, reason: "notClaimed" };
+  // 村(会社)が解散した・注文が消えた場合は、品物を消費する前に断る(品物だけ取られないように)
+  if ((claim.issuer?.type === "village" || claim.issuer?.type === "company") && !canCompleteVillageOrder(claim.issuer.id, questId, player.name, player.id).ok) {
+    return { ok: false, reason: "villageGone" };
+  }
 
   const origin = lecternLocation ?? player.location;
   const containers = getNearbyContainers(player.dimension, origin);
   if (containers.length === 0) return { ok: false, reason: "noContainer" };
 
   const { itemId, count } = claim.requirement;
+  const isVillage = claim.issuer?.type === "village" || claim.issuer?.type === "company"; // 村・会社の入荷(数量つき。代金は発注元の口座から)
   let have = 0;
   for (const inv of containers) {
     for (let i = 0; i < inv.size; i++) {
@@ -322,6 +372,17 @@ export function deliverQuest(player, questId, lecternLocation) {
         }
       }
     }
+  }
+
+  if (isVillage) {
+    // 村の入荷: 代金は村の口座から。履歴書(グレード・ライセンス)は動かさない。
+    const done = completeVillageOrder(claim.issuer.id, questId, player.name, player.id);
+    claim.state = "completed";
+    saveClaims(player, claims);
+    registrySet(questId, player.name, { state: "completed", expiresWeek: claim.expiresWeek });
+    if (!done.ok) return { ok: true, village: true, wage: 0, grossWage: claim.reward, short: claim.reward, villageName: claim.title.ja, villageNames: { ja: claim.title.ja, en: claim.title.en } };
+    if (done.paid > 0) creditEmeralds(player, done.paid, FLOW.VILLAGE_BUY, { from: done.villageName });
+    return { ok: true, village: true, wage: done.paid, grossWage: claim.reward, short: done.short, villageName: done.villageName, villageNames: done.villageNames };
   }
 
   const resumeBefore = getOrCreatePlayerResume(player, claim.category);

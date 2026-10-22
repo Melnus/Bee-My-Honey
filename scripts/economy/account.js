@@ -84,9 +84,14 @@ export function createEntityAccount({ id, type, name = null, cash = 0, holdings 
 }
 
 // 口座を消す(村の登録解除など)。消した時点の資産の時価(現金+債権+現物−負債 が正のぶん)を、消えたお金として記録する。
+const deleteHooks = [];
+// 口座が消える直前に呼ばれる処理を登録する(ローンの貸し手への通知など。循環importを避けるため)
+export function registerDeleteHook(fn) { deleteHooks.push(fn); }
+
 export function deleteEntityAccount(id) {
   const acct = getEntityAccount(id);
   if (!acct) return { ok: false, reason: "not_found", writtenOff: 0 };
+  for (const fn of deleteHooks) { try { fn(acct); } catch (e) { console.warn("[BeeMyHoney] account delete hook: " + e); } }
   const sheet = getBalanceSheet(acct);
   const writtenOff = Math.max(0, Math.round(sheet.equity));
   world.setDynamicProperty(ACCT_PREFIX + id, undefined);
@@ -210,4 +215,11 @@ export function getInterventions() {
   return readJson(INTERVENTIONS_KEY, []);
 }
 
-
+// 介入案件を処理済みにする(法人テンプレートが、強制解散へ進めた時に使う)。
+export function resolveIntervention(entityId, status = "closed") {
+  const queue = readJson(INTERVENTIONS_KEY, []);
+  let changed = false;
+  for (const r of queue) if (r.entityId === entityId && r.status === "open") { r.status = status; changed = true; }
+  if (changed) writeJson(INTERVENTIONS_KEY, queue);
+  return changed;
+}
