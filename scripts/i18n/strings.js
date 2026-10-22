@@ -556,6 +556,24 @@ export const STR = {
   // ------------------------------------------
   // 融資管理(繰上返済) — strings.js の loanLentMsg の直後に貼る
   // ------------------------------------------
+  // ---- 個人間の送金 ----
+  bankSendBtn: { ja: "送金する", en: "Send Money" },
+  transferPickTitle: { ja: "送金先を選ぶ", en: "Choose a Recipient" },
+  transferPickBody: {
+    ja: (bal, feePct, remaining) => `所持: ${bal}E\nいまオンラインのプレイヤーに送れます。手数料 ${feePct}%(送り主が上乗せで払う)\n今日あと送れる額: ${remaining}E`,
+    en: (bal, feePct, remaining) => `Balance: ${bal}E\nSend to players who are online now. Fee ${feePct}% (paid by the sender on top)\nLeft to send today: ${remaining}E`
+  },
+  transferNoPlayers: { ja: "§c送れる相手がいません(オンラインのほかのプレイヤーがいません)。", en: "§cNo one to send to (no other players online)." },
+  transferModalTitle: { ja: (name) => `${name}へ送金`, en: (name) => `Send to ${name}` },
+  transferConfirmBody: {
+    ja: (name, qty, fee, bal) => `${name}に${qty}Eを送ります。手数料 ${fee}E\n所持: ${bal}E → ${bal - qty - fee}E`,
+    en: (name, qty, fee, bal) => `Send ${qty}E to ${name}. Fee ${fee}E\nBalance: ${bal}E → ${bal - qty - fee}E`
+  },
+  transferOverCapMsg: { ja: (remaining) => `§c今日の送金上限を超えます(あと${remaining}E)。`, en: (remaining) => `§cThat exceeds today's transfer limit (${remaining}E left).` },
+  transferConfirmBtn: { ja: "送金する", en: "Send" },
+  transferDoneMsg: { ja: (name, qty) => `§a${name}に${qty}Eを送金しました。`, en: (name, qty) => `§aSent ${qty}E to ${name}.` },
+  transferReceivedMsg: { ja: (name, qty) => `§a${name}から${qty}Eが届きました。`, en: (name, qty) => `§aReceived ${qty}E from ${name}.` },
+  transferFailMsg: { ja: "§c送金できませんでした(残高不足、または相手がオフラインです)。", en: "§cTransfer failed (insufficient funds or the recipient went offline)." },
   loanBtnManage: { ja: "融資管理", en: "Loan Management" },
   loanManageTitle: { ja: "融資管理", en: "Loan Management" },
   loanManageBorrowLine: {
@@ -590,6 +608,72 @@ export const STR = {
     ja: (name, amount, weeks) => `§a${name}に${amount}Eを貸し付けました。${weeks}週後に結果がわかります。`,
     en: (name, amount, weeks) => `§aLent ${amount}E to ${name}. Result in ${weeks} weeks.`
   },
+  // ---- 借入依頼の掲示板(借りる→募集 / 貸す→依頼の一覧)----
+  loanBorrowTopTitle: { ja: "借りる", en: "Borrow" },
+  loanBorrowTopBody: {
+    ja: (own) => `銀行から借りる(審査あり・すぐ受け取れる)か、貸し手を募集します(7日ほど掲示。条件は信用スコアで決まり、審査なし)。${own}`,
+    en: (own) => `Borrow from the bank (screened, instant), or post a request for a lender (listed about 7 days; terms follow your credit score, no screening).${own}`
+  },
+  loanBorrowTopOwn: {
+    ja: (amount, weeks, ratePct, daysLeft) => `\n\n§e募集中: ${amount}E / ${weeks}週 / 週利${ratePct}%(あと約${daysLeft}日)§r`,
+    en: (amount, weeks, ratePct, daysLeft) => `\n\n§ePosted: ${amount}E / ${weeks}w / ${ratePct}%/wk (about ${daysLeft}d left)§r`
+  },
+  loanBtnBank: { ja: "銀行から借りる", en: "Borrow from the bank" },
+  loanBtnPost: { ja: "貸し手を募集する", en: "Post a request for lenders" },
+  loanBtnCancelPost: { ja: "募集を取り下げる", en: "Withdraw my request" },
+  loanPostTitle: { ja: "貸し手を募集", en: "Request a Lender" },
+  loanPostBody: {
+    ja: (limit) => `金額を選ぶと依頼が掲示され、貸し手が現れた時点でお金が入ります(借りられるのはあなたがオンラインの間)。\n金利は信用スコアが低いほど高くなります。\n借りられる上限: ${limit}E(純資産の半分まで。純資産 = 口座・外貨・株 − 借入)`,
+    en: (limit) => `Pick an amount to post a request. Funds arrive when a lender takes it (while you are online).\nLower credit scores mean higher rates.\nBorrow limit: ${limit}E (up to half your net assets: account, currencies and stocks minus loans)`
+  },
+  loanPostNoAssets: {
+    ja: (limit, min) => `§c資産が少なく、依頼できる最小の金額(${min}E)に届きません。いま借りられる上限は${limit}Eです。`,
+    en: (limit, min) => `§cYour assets are too low for the smallest request (${min}E). Current borrow limit: ${limit}E.`
+  },
+  loanPostOverLimit: { ja: (limit) => `§c資産に対して借りられる額を超えています(上限${limit}E)。`, en: (limit) => `§cThat is above what your assets allow (limit ${limit}E).` },
+  loanLendOverLimit: { ja: (limit) => `§c貸せる額を超えています。1件に貸せるのは資産の半分までです(いまの上限${limit}E)。`, en: (limit) => `§cThat is above your lending limit: one loan may be at most half your assets (now ${limit}E).` },
+  loanPostTierBtn: {
+    ja: (amount, weeks, ratePct, weekly) => `${amount}E / ${weeks}週 / 週利${ratePct}% / 週${weekly}E`,
+    en: (amount, weeks, ratePct, weekly) => `${amount}E / ${weeks}w / ${ratePct}%/wk / ${weekly}E per week`
+  },
+  loanPostedMsg: {
+    ja: (amount) => `§a${amount}Eの借入依頼を掲示しました。貸し手が現れるのを待ちます(約7日)。`,
+    en: (amount) => `§aPosted a ${amount}E loan request. It stays up for about 7 days.`
+  },
+  loanPostAlready: { ja: "§c既に募集中です。取り下げてからやり直してください。", en: "§cYou already have a request posted. Withdraw it first." },
+  loanPostCancelledMsg: { ja: "§a借入依頼を取り下げました。", en: "§aRequest withdrawn." },
+  loanKindPlayer: { ja: "個人", en: "Player" },
+  loanKindVillage: { ja: "村", en: "Village" },
+  loanKindCompany: { ja: "会社", en: "Company" },
+  loanKindNpc: { ja: "窓口", en: "Desk" },
+  loanRequestLine: {
+    ja: (kind, name, amount, weeks, ratePct, repayPct, assets, daysLeft) => `[${kind}] ${name} - ${amount}E / ${weeks}週 / 週利${ratePct}% / 返済見込${repayPct}%${assets === null ? "" : ` / 資産${assets}E`}${daysLeft === null ? "" : ` / あと約${daysLeft}日`}`,
+    en: (kind, name, amount, weeks, ratePct, repayPct, assets, daysLeft) => `[${kind}] ${name} - ${amount}E / ${weeks}w / ${ratePct}%/wk / ${repayPct}% likely${assets === null ? "" : ` / assets ${assets}E`}${daysLeft === null ? "" : ` / ~${daysLeft}d left`}`
+  },
+  loanLendListBody: {
+    ja: (bal, n) => `所持: ${bal}E\n掲示中の依頼: ${n}件(個人・村・会社)。下に窓口の融資希望者も並びます。`,
+    en: (bal, n) => `Balance: ${bal}E\nOpen requests: ${n} (players, villages, companies). Desk borrowers are listed below.`
+  },
+  loanLentMarketMsg: {
+    ja: (name, amount, weeks, weekly) => `§a${name}に${amount}Eを貸しました。週${weekly}E×${weeks}週で返済が届きます(オフライン中は次のログインで届きます)。`,
+    en: (name, amount, weeks, weekly) => `§aLent ${amount}E to ${name}. Expect ${weekly}E/week for ${weeks} weeks (delivered at next login if you are offline).`
+  },
+  loanLendGone: { ja: "§cその依頼はもうありません。", en: "§cThat request is no longer available." },
+  loanLendBorrowerOffline: { ja: "§c借り手が今オンラインではありません。", en: "§cThe borrower is offline right now." },
+  loanLendBorrowerBusy: { ja: "§c借り手は既に別のローンを利用中です。", en: "§cThe borrower already has a loan." },
+  loanMarketFilledBorrower: {
+    ja: (lender, amount, weekly, weeks) => `§a${lender}が${amount}Eを貸してくれました。週${weekly}E×${weeks}週で返済します。`,
+    en: (lender, amount, weekly, weeks) => `§a${lender} lent you ${amount}E. Repay ${weekly}E/week for ${weeks} weeks.`
+  },
+  loanMarketExpired: { ja: (amount) => `§e${amount}Eの借入依頼は、貸し手が現れないまま掲示期間が終わりました。`, en: (amount) => `§eYour ${amount}E loan request expired without a lender.` },
+  loanMailPay: { ja: (name, amount) => `§a[融資] ${name}から返済 ${amount}E を受け取りました。`, en: (name, amount) => `§a[Lending] Received ${amount}E repayment from ${name}.` },
+  loanMailClosedOk: { ja: (name) => `§a[融資] ${name}への貸付が完済になりました。`, en: (name) => `§a[Lending] The loan to ${name} is fully repaid.` },
+  loanMailClosedLost: { ja: (name) => `§c[融資] ${name}への貸付が回収不能で終了しました(受け取れた分のみ)。`, en: (name) => `§c[Lending] The loan to ${name} ended unpaid (only what was already received).` },
+  loanManageOwnRequest: {
+    ja: (amount, weeks, daysLeft) => `【募集中】${amount}E / ${weeks}週(あと約${daysLeft}日)`,
+    en: (amount, weeks, daysLeft) => `[Request posted] ${amount}E / ${weeks}w (about ${daysLeft}d left)`
+  },
+  loanManageLender: { ja: (name) => `貸し手: ${name}`, en: (name) => `Lender: ${name}` },
 
   // ------------------------------------------
   // 保険窓口
@@ -714,6 +798,10 @@ export const STR = {
   laborDispatchedToMsg: {
     ja: (name, facilityName, days, itemName, count) => `§a${name}を${facilityName}へ${days}日間派遣しました。産出予定: ${itemName} x${count}`,
     en: (name, facilityName, days, itemName, count) => `§aDispatched ${name} to ${facilityName} for ${days} days. Expected output: ${itemName} x${count}`
+  },
+  laborFactoryNoInputMsg: {
+    ja: (name) => `§e${name} には加工できる原料の在庫がありません。農場・鉱山からの産出や、納品された原料が入ると動きます。`,
+    en: (name) => `§e${name} has no raw materials to process. It runs once farms, mines or deliveries stock it.`
   },
   laborDispatchDeliveredMsg: {
     ja: (facilityName, itemName, count) => `${facilityName}に ${itemName} x${count} が届きました。`,
@@ -903,7 +991,360 @@ export const STR = {
       `§7HRMHRM株を${threshold}E分以上保有していると、クエストの納品・コンサル契約満了・村人派遣の回収のたびに自動でストックオプション(自社株)が付与されます。`,
     en: (threshold) =>
       `§7Hold at least ${threshold}E worth of HRMHRM stock, and you'll automatically receive stock options (company shares) every time you deliver a quest, complete a consultant contract, or collect a villager dispatch.`
-  }
+  },
+
+  // ------------------------------------------
+  // 法人テンプレート(鐘=村 / ロードストーン=会社)。ロジックは economy/core-registry.js
+  // ------------------------------------------
+  coreBtnClose: { ja: "閉じる", en: "Close" },
+  coreBtnBack: { ja: "戻る", en: "Back" },
+  coreBtnCancel: { ja: "やめる", en: "Cancel" },
+  coreRegVillageTitle: { ja: "村の登記", en: "Register a Village" },
+  coreRegVillageBody: {
+    ja: "この鐘を村として登記します。\n村名と村長の名前はランダムに決まります。登録料は無料です。\n(輝くイカスミを1個消費)",
+    en: "Register this bell as a village.\nThe village name and head are chosen at random. Registration is free.\n(Consumes 1 Glow Ink Sac)"
+  },
+  coreRegBtn: { ja: "登記する", en: "Register" },
+  coreRegCompanyTitle: { ja: "会社の登記", en: "Register a Company" },
+  coreRegCompanyField: {
+    ja: (fee, max) => `登録料: ${fee} E(HRMHRMへ払います。返金なし)\n会社名(${max}文字まで)`,
+    en: (fee, max) => `Fee: ${fee} E (paid to HRMHRM, non-refundable)\nCompany name (up to ${max} characters)`
+  },
+  coreRegCompanyPlaceholder: { ja: "例: メナス採掘工業", en: "e.g. Menace Mining Co." },
+  coreRegCompanyFieldEn: {
+    ja: (max) => `英語名(任意。${max}文字まで)\n§7あなたの言語と違う言語で遊ぶ人には、こちらの名前が表示されます。空欄なら、同じ名前がそのまま表示されます。`,
+    en: (max) => `Japanese name (optional, up to ${max} characters)\n§7Players using another language will see this name. If left empty, the same name is shown to everyone.`
+  },
+  coreRegCompanyPlaceholderEn: { ja: "例: Menace Mining Co.", en: "e.g. メナス採掘工業" },
+  coreErrBlockChanged: { ja: "§cブロックが変わっています。もう一度やり直してください。", en: "§cThe block has changed. Please try again." },
+  coreErrAlready: { ja: "§cすでに登記済みです。", en: "§cThis block is already registered." },
+  coreErrVillageOverlap: {
+    ja: (name) => `§cこの範囲にはすでに村「${name}」が登記されています。`,
+    en: (name) => `§cA village "${name}" is already registered in this area.`
+  },
+  coreErrOneCompany: {
+    ja: (name) => `§c会社は1人1社までです(登記済み: 「${name}」)。`,
+    en: (name) => `§cOne company per person (already registered: "${name}").`
+  },
+  coreErrCooldown: {
+    ja: (days) => `§c前の会社を解散したばかりのため、あと ${days} 日は新しい会社を登記できません。`,
+    en: (days) => `§cYou recently dissolved a company. You can register a new one in ${days} day(s).`
+  },
+  coreErrNameEmpty: { ja: "§c会社名を入力してください。", en: "§cPlease enter a company name." },
+  coreErrNameTooLong: { ja: (max) => `§c会社名は${max}文字までです。`, en: (max) => `§cCompany names are limited to ${max} characters.` },
+  coreErrNameReserved: { ja: "§cその名前は使えません。", en: "§cThat name cannot be used." },
+  coreErrNameDuplicate: { ja: "§cその会社名はすでに使われています。", en: "§cThat company name is already taken." },
+  coreErrFunds: {
+    ja: (fee, bal) => `§c登録料が足りません(登録料 ${fee} E / 口座残高 ${bal} E)。口座管理から預け入れてください。`,
+    en: (fee, bal) => `§cNot enough funds (fee ${fee} E / balance ${bal} E). Deposit emeralds at the bank first.`
+  },
+  coreErrNoCatalyst: { ja: "§c輝くイカスミを手に持ってください。", en: "§cHold a Glow Ink Sac in your hand." },
+  coreErrAccount: { ja: "§c口座を作れませんでした。登録料は戻しました。", en: "§cCould not open the account. The fee was refunded." },
+  coreBroadcastRegistered: {
+    ja: (kind, name, id) => `§a[登記] ${kind === "village" ? "村" : "会社"}「${name}」(ID: ${id}) が誕生しました。`,
+    en: (kind, name, id) => `§a[Registry] ${kind === "village" ? "Village" : "Company"} "${name}" (ID: ${id}) was founded.`
+  },
+  coreBroadcastDissolved: {
+    ja: (name, id) => `§e[登記] 「${name}」(ID: ${id}) は解散しました。`,
+    en: (name, id) => `§e[Registry] "${name}" (ID: ${id}) was dissolved.`
+  },
+  coreBroadcastForced: {
+    ja: (name, reason) => `§e[登記] 「${name}」は${reason === "abandoned" ? "社長の不在が続いたため" : reason === "empty" ? "人口0が続いたため" : reason === "deregistered" ? "口座が閉じられたため" : "債務超過が続いたため"}強制的に解散しました。`,
+    en: (name, reason) => `§e[Registry] "${name}" was dissolved ${reason === "abandoned" ? "because its president stayed away" : reason === "empty" ? "because it had no population" : reason === "deregistered" ? "because its account was closed" : "because it stayed insolvent"}.`
+  },
+  coreBreakBlocked: {
+    ja: "§c登記済みのブロックは壊せません。触って「経営管理」から解散してください。",
+    en: "§cA registered block cannot be broken. Interact with it and dissolve it from Management."
+  },
+  coreRestored: {
+    ja: (name) => `§e[登記] 「${name}」のコアブロックが消えていたため復元しました。`,
+    en: (name) => `§e[Registry] The core block of "${name}" was missing and has been restored.`
+  },
+  coreLostAccident: {
+    ja: (ids) => `§c[登記] 解散の記録がないのにデータが見つからない登記があります(事故): ${ids}`,
+    en: (ids) => `§c[Registry] Registrations with no data and no dissolution record (accident): ${ids}`
+  },
+  corePendingPaid: {
+    ja: (amount, from) => `§a[清算] 「${from}」の清算金 ${amount} E が口座に振り込まれました。`,
+    en: (amount, from) => `§a[Liquidation] ${amount} E from the liquidation of "${from}" was deposited into your account.`
+  },
+  corePendingPenalty: {
+    ja: (delta) => `§c[清算] 解散のペナルティで、信用スコアが ${delta} 下がりました。`,
+    en: (delta) => `§c[Liquidation] Your credit score dropped by ${delta} because of the dissolution penalty.`
+  },
+  coreMenuTitleVillage: { ja: "村の管理", en: "Village Management" },
+  coreMenuTitleCompany: { ja: "会社の管理", en: "Company Management" },
+  coreMenuBody: {
+    ja: (isVillage, name, head, id) => `${isVillage ? "村名" : "会社名"}: ${name}\n${isVillage ? "村長" : "社長"}: ${head}\nID: ${id}`,
+    en: (isVillage, name, head, id) => `${isVillage ? "Village" : "Company"}: ${name}\n${isVillage ? "Head" : "President"}: ${head}\nID: ${id}`
+  },
+  coreBtnPeople: { ja: "人員管理", en: "Personnel" },
+  coreBtnAccounting: { ja: "会計管理", en: "Accounting" },
+  coreBtnAssets: { ja: "保有施設", en: "Facilities" },
+  coreBtnStock: { ja: "在庫管理", en: "Inventory" },
+  coreBtnContracts: { ja: "契約管理", en: "Contracts" },
+  coreBtnManage: { ja: "経営管理", en: "Management" },
+  coreComingSoon: { ja: "§7準備中です。", en: "§7Coming soon." },
+  corePeopleTitle: { ja: "人員管理", en: "Personnel" },
+  corePeopleVillageBody: {
+    ja: (xz, y, total, adults, babies) => `範囲: コアブロックから 水平±${xz} / 高さ±${y} ブロック\n村人: ${total}人(大人 ${adults} / 子供 ${babies})`,
+    en: (xz, y, total, adults, babies) => `Range: ±${xz} horizontal / ±${y} vertical from the core block\nVillagers: ${total} (adults ${adults} / children ${babies})`
+  },
+  corePeopleHistory: {
+    ja: (pop, day, hist) => `\n\n記録人口: ${pop}人 (日${day}時点)\n履歴: ${hist}`,
+    en: (pop, day, hist) => `\n\nRecorded population: ${pop} (day ${day})\nHistory: ${hist}`
+  },
+  corePeopleNote: {
+    ja: "\n\n§7※読み込まれている範囲の村人だけ数えます。毎日1回、近くにプレイヤーがいる時に記録します。",
+    en: "\n\n§7Only loaded villagers are counted. Recorded once a day while a player is nearby."
+  },
+  corePeopleCompanyBody: {
+    ja: (head, count, names) => `社長: ${head}\nメンバー: ${count}人${names ? "\n" + names : ""}`,
+    en: (head, count, names) => `President: ${head}\nMembers: ${count}${names ? "\n" + names : ""}`
+  },
+  coreProxyNote: { ja: "\n\n§e社長が不在のため、採用・見送りを代行しています。", en: "\n\n§eThe president is away; you can hire and decline on their behalf." },
+  coreApplicantCount: { ja: (n) => `\n応募者: ${n}人`, en: (n) => `\nApplicants: ${n}` },
+  coreReviewBtn: { ja: (n) => `応募者を確認 (${n})`, en: (n) => `Review applicants (${n})` },
+  coreLeaveBtn: { ja: "退職する", en: "Leave the company" },
+  coreApplyBtn: { ja: "応募する", en: "Apply" },
+  coreAppliedBody: { ja: "\n\n§7応募済みです。社長の返答をお待ちください。", en: "\n\n§7You have applied. Please wait for the president's reply." },
+  coreApplyPrompt: { ja: "\n\nこの会社に応募しますか?", en: "\n\nApply to this company?" },
+  coreApplyDone: { ja: (name) => `§a「${name}」に応募しました。`, en: (name) => `§aYou applied to "${name}".` },
+  coreApplyFull: { ja: "§c応募者がいっぱいです。", en: "§cThe applicant list is full." },
+  coreApplyAlready: { ja: "§7すでに応募しています。", en: "§7You have already applied." },
+  coreLeft: { ja: (name) => `§e「${name}」を退職しました。`, en: (name) => `§eYou left "${name}".` },
+  coreReviewTitle: { ja: "応募者の確認", en: "Applicants" },
+  coreReviewBody: {
+    ja: (name, day, remain) => `「${name}」をメンバーに入れますか?\n(応募日: 日${day} / 残り ${remain}人)`,
+    en: (name, day, remain) => `Add "${name}" as a member?\n(Applied: day ${day} / ${remain} remaining)`
+  },
+  coreHireBtn: { ja: "採用", en: "Hire" },
+  coreSkipBtn: { ja: "見送り", en: "Decline" },
+  coreHired: { ja: (name) => `§a「${name}」を採用しました。`, en: (name) => `§aHired "${name}".` },
+  coreSkipped: { ja: (name) => `§7「${name}」を見送りました。`, en: (name) => `§7Declined "${name}".` },
+  coreForbidden: { ja: "§c権限がありません。", en: "§cYou do not have permission." },
+  coreManageTitle: { ja: "経営管理", en: "Management" },
+  coreDissolveBtn: { ja: "§4解散手続き", en: "§4Dissolve" },
+  coreManageOnlyOwner: { ja: "§c経営管理は登記した本人だけが使えます。", en: "§cOnly the person who registered it can use Management." },
+  coreDissolveTitle: { ja: "解散の確認(清算の見積もり)", en: "Confirm Dissolution (Liquidation Estimate)" },
+  coreDissolveBody: {
+    ja: (name, est, pctRatio, penaltyPct, cooldown, isCompany) => {
+      const f = (n) => Math.round(n).toLocaleString("en-US");
+      const lines = [
+        `「${name}」を解散します。`,
+        `現金 ${f(est.cash)} E + 債権 ${f(est.receivables)} E`,
+        `現物の時価 ${f(est.holdingsValue)} E → 銀行の買取 ${f(est.bankBuy)} E(時価の${pctRatio}%)`,
+        `負債 ${f(est.liabilities)} E`,
+        `§l清算結果: ${est.result >= 0 ? "+" : "-"}${f(Math.abs(est.result))} E§r`,
+        est.payout > 0 ? `残りの ${f(est.payout)} E は口座へ払われます。` : est.shortfall > 0 ? `§c${f(est.shortfall)} E が足りません。不足分は銀行の損失になります。` : "払われる金額はありません。"
+      ];
+      if (penaltyPct > 0) lines.push(`§cペナルティ: 信用スコアが現在の ${penaltyPct}% 下がります。` + (cooldown > 0 ? `新しい会社は ${cooldown} 日後まで登記できません。` : ""));
+      if (isCompany) lines.push("登録料は戻りません。");
+      lines.push("§7登記が抹消され、ブロックは壊せるようになります。元に戻せません。");
+      return lines.join("\n");
+    },
+    en: (name, est, pctRatio, penaltyPct, cooldown, isCompany) => {
+      const f = (n) => Math.round(n).toLocaleString("en-US");
+      const lines = [
+        `Dissolve "${name}".`,
+        `Cash ${f(est.cash)} E + receivables ${f(est.receivables)} E`,
+        `Holdings at market ${f(est.holdingsValue)} E -> bank buys for ${f(est.bankBuy)} E (${pctRatio}% of market)`,
+        `Liabilities ${f(est.liabilities)} E`,
+        `§lResult: ${est.result >= 0 ? "+" : "-"}${f(Math.abs(est.result))} E§r`,
+        est.payout > 0 ? `${f(est.payout)} E will be paid into your account.` : est.shortfall > 0 ? `§cShort by ${f(est.shortfall)} E. The shortfall becomes a loss for the bank.` : "Nothing will be paid out."
+      ];
+      if (penaltyPct > 0) lines.push(`§cPenalty: your credit score drops by ${penaltyPct}%.` + (cooldown > 0 ? ` You cannot register a new company for ${cooldown} day(s).` : ""));
+      if (isCompany) lines.push("The registration fee is not refunded.");
+      lines.push("§7The registration is erased and the block becomes breakable. This cannot be undone.");
+      return lines.join("\n");
+    }
+  },
+  coreDissolveConfirmBtn: { ja: "§4解散する", en: "§4Dissolve" },
+  coreDissolveDone: { ja: (name) => `§e「${name}」を解散しました。`, en: (name) => `§eDissolved "${name}".` },
+  coreDissolveFail: { ja: "§c解散できませんでした。もう一度試してください。", en: "§cCould not dissolve. Please try again." },
+
+  laborFacilityClosedMsg: { ja: "§7派遣先の施設は閉鎖されていたため、産出は届きませんでした。", en: "§7The facility had been closed, so no output was delivered." },
+  coreCompanyOnly: { ja: "§7この機能は会社だけが使えます。", en: "§7Only companies can use this." },
+  coreStockTitle: { ja: "在庫管理", en: "Inventory" },
+  coreStockBody: {
+    ja: (lines, keep, valueE) => `${lines}\n\n在庫の時価: 約 ${valueE} E\n§7自社の施設(農場・鉱山・工場)に派遣された村人の産出が、ここに溜まります。週の締めに、1品目あたり ${keep} 個を超えた分が、その時の売値で換金されて会社の口座へ入ります。`,
+    en: (lines, keep, valueE) => `${lines}\n\nStock value: about ${valueE} E\n§7Output from villagers dispatched to your facilities (farm, mine, factory) accumulates here. At each weekly close, whatever exceeds ${keep} per item is sold at the current price into the company account.`
+  },
+  coreStockEmpty: { ja: "在庫はありません。", en: "No stock." },
+  coreContractsTitle: { ja: "契約管理", en: "Contracts" },
+  coreContractsBody: {
+    ja: (ongoing, log) => `§l進行中の派遣§r\n${ongoing}\n\n§l最近の結果§r\n${log}\n\n§7会社は、農場・鉱山・工場の3つの仮想施設を持っています。オーナーズクラブの派遣先に、会社の施設が並びます。`,
+    en: (ongoing, log) => `§lDispatches in progress§r\n${ongoing}\n\n§lRecent results§r\n${log}\n\n§7A company has three virtual facilities: a farm, a mine and a factory. They appear as dispatch destinations in the Owners Club.`
+  },
+  coreContractsNone: { ja: "なし", en: "None" },
+  coreStockBodyVillage: {
+    ja: (lines, valueE, ship) => `§l村の在庫§r\n${lines}\n\n在庫の時価: 約 ${valueE} E\n§7スタッフサービスの「村からのクエスト」で納品された物資が、ここに溜まります。週の締めに、パン・焼き肉・インゴット・原木などに加工して、相場より安く市場へ出荷し、代金が村の口座に入ります。加工できない品(作物・腐った肉など)は村の中で消費されます。§r\n\n§l先週の加工・出荷§r\n${ship}`,
+    en: (lines, valueE, ship) => `§lVillage stock§r\n${lines}\n\nStock value: about ${valueE} E\n§7Goods delivered through Staff Service -> Village Quests accumulate here. At the weekly close they are processed (bread, cooked meat, ingots, logs...) and shipped to the market below the going price; the proceeds go to the village account. Goods that cannot be processed (crops, rotten flesh) are consumed in the village.§r\n\n§lLast weekly processing and shipping§r\n${ship}`
+  },
+  coreShipNone: { ja: "まだ週の締めを迎えていません。", en: "No weekly close yet." },
+  coreShipLine: {
+    ja: (week, made, cash, used) => `第${week}週: 加工品 ${made} → 出荷収入 ${cash} E\n消費した物資: ${used}`,
+    en: (week, made, cash, used) => `Week ${week}: made ${made} -> shipping income ${cash} E\nConsumed: ${used}`
+  },
+  coreSlotLine: {
+    ja: (item, taken, need, unit) => `・${item} 受注済み ${taken}/${need} 個(1個 ${unit}E)`,
+    en: (item, taken, need, unit) => `- ${item} ordered ${taken}/${need} (${unit}E each)`
+  },
+  coreSlotsNoneVillage: { ja: "村の依頼は、プレイヤーごと・日ごとに違う品目・量で出ます(スタッフサービスの「村からのクエスト」で確認できます)。", en: "Requests differ per player and per day (see Staff Service -> Village Quests)." },
+  coreSlotsNoneCompany: { ja: "きょうの依頼はありません(在庫が目標に達しています)。", en: "No requests today (stock has reached the targets)." },
+  coreOrderLine: {
+    ja: (who, item, qty, reward, done) => `・${who}: ${item} x${qty}(${reward}E) ${done ? "§a納品済み§r" : "§e受注中§r"}`,
+    en: (who, item, qty, reward, done) => `- ${who}: ${item} x${qty} (${reward}E) ${done ? "§adelivered§r" : "§eclaimed§r"}`
+  },
+  coreOrdersTitle: { ja: "依頼・受注の状況", en: "Requests and Orders" },
+  coreOrdersBodyVillage: {
+    ja: (today, orders, cash, reserved) => `§lきょうの必要数§r\n${today}\n\n§l受注の一覧§r\n${orders}\n\n村の資金: ${cash} E(受注で予約済み ${reserved} E)\n§7住民の人数に応じて、プレイヤーごとに毎日3品目の依頼が決まります。`,
+    en: (today, orders, cash, reserved) => `§lToday's needs§r\n${today}\n\n§lOrders§r\n${orders}\n\nVillage funds: ${cash} E (${reserved} E reserved for claimed orders)\n§7Each day the village asks every player for 3 items, in proportion to its residents.`
+  },
+  coreRequestsBodyCompany: {
+    ja: (today, orders) => `§lきょうの自動依頼(足りない原料)§r\n${today}\n\n§l受注の一覧§r\n${orders}`,
+    en: (today, orders) => `§lToday's automatic requests (missing materials)§r\n${today}\n\n§lOrders§r\n${orders}`
+  },
+  coreContractLine: {
+    ja: (who, genre, daysLeft, item, count) => `・${who}: ${genre}(${daysLeft > 0 ? `あと${daysLeft}日` : "完了待ち"}) ${item} x${count}`,
+    en: (who, genre, daysLeft, item, count) => `- ${who}: ${genre} (${daysLeft > 0 ? `${daysLeft} day(s) left` : "ready"}) ${item} x${count}`
+  },
+  coreContractLogLine: {
+    ja: (who, genre, days, result, item, count) => `・${who}: ${genre} ${days}日 → ${result === "delivered" ? `${item} x${count} 入荷` : result === "accident" ? "事故(産出なし)" : "産出なし"}`,
+    en: (who, genre, days, result, item, count) => `- ${who}: ${genre} ${days}d -> ${result === "delivered" ? `${item} x${count} received` : result === "accident" ? "accident, no output" : "no output"}`
+  },
+  coreAcctTitle: { ja: "会計管理", en: "Accounting" },
+  coreAcctBody: {
+    ja: (cash, recv, holdings, liab, equity, weeks) => `現金 ${cash} E / 債権 ${recv} E / 現物 ${holdings} E\n負債 ${liab} E\n§l純資産 ${equity} E§r\n\n§l直近の週§r\n${weeks}`,
+    en: (cash, recv, holdings, liab, equity, weeks) => `Cash ${cash} E / Receivables ${recv} E / Holdings ${holdings} E\nLiabilities ${liab} E\n§lNet worth ${equity} E§r\n\n§lRecent weeks§r\n${weeks}`
+  },
+  coreAcctWeekLine: {
+    ja: (week, revenue, expense, net) => `・第${week}週: 収益 ${revenue} / 費用 ${expense} / 損益 ${net}`,
+    en: (week, revenue, expense, net) => `- Week ${week}: revenue ${revenue} / expense ${expense} / net ${net}`
+  },
+  coreAcctNoWeeks: { ja: "まだ締めた週はありません。", en: "No weekly close yet." },
+  coreAcctNoAccount: { ja: "口座が見つかりません。", en: "No account found." },
+
+  // ------------------------------------------
+  // スタッフサービスの欄(導入クエスト / 資格なし / 資格あり / 村 / 会社) — economy/tutorial-chain.js
+  // ------------------------------------------
+  laborStaffMenuBody: {
+    ja: (max, active) => `掲示板を選んでください。\n同時に受けられるのは${max}件まで(いま${active}件)。`,
+    en: (max, active) => `Choose a board.\nYou can hold up to ${max} quests at once (now ${active}).`
+  },
+  laborStaffBtnTutorial: {
+    ja: (done, total) => `導入クエスト (${done}/${total})\nまずはここから`,
+    en: (done, total) => `Introductory Quests (${done}/${total})\nStart here`
+  },
+  laborStaffBtnUnqualified: {
+    ja: (active) => `資格なしの求人${active > 0 ? `  [受注中 ${active}]` : ""}\n誰でも受けられます`,
+    en: (active) => `Open Jobs (no license)${active > 0 ? `  [Active ${active}]` : ""}\nAnyone can take these`
+  },
+  laborStaffBtnLicensed: {
+    ja: (active) => `資格が必要な求人${active > 0 ? `  [受注中 ${active}]` : ""}\nネザー・水中・エンド`,
+    en: (active) => `Licensed Jobs${active > 0 ? `  [Active ${active}]` : ""}\nNether, Underwater, End`
+  },
+  laborStaffBtnVillage: { ja: "村からのクエスト\n村の依頼の掲示板", en: "Village Quests\nRequests from villages" },
+  laborStaffBtnCompany: { ja: "会社からのクエスト\n会社の依頼の掲示板", en: "Company Quests\nRequests from companies" },
+  laborBoardTitleUnqualified: { ja: "資格なしの求人", en: "Open Jobs (no license)" },
+  laborBoardTitleLicensed: { ja: "資格が必要な求人", en: "Licensed Jobs" },
+  laborBoardTitleVillage: { ja: "村からのクエスト", en: "Village Quests" },
+  laborBoardTitleCompany: { ja: "会社からのクエスト", en: "Company Quests" },
+  laborBoardEmptyVillage: {
+    ja: "いまのところ、村からの依頼はありません。\n§7村の依頼は、登録された村に住民がいると、毎日掲示されます。",
+    en: "There are no requests from villages right now.\n§7Registered villages with residents post requests every day."
+  },
+  villageBoardBody: {
+    ja: (max, active) => `村への納品の依頼です。依頼は人ごと・日ごとに変わります。同時に受けられるのは ${max} 件まで(いま ${active} 件)。\n数量を決めて受注し、書見台の近くのチェストに入れて納品します。代金は村の資金から払われます。`,
+    en: (max, active) => `Deliveries to villages. Requests differ per player and per day. You can hold up to ${max} quests at once (now ${active}).\nPick a quantity, then put the goods in a chest near the lectern to deliver. Villages pay from their own funds.`
+  },
+  villageBoardClaimed: {
+    ja: (title, itemName, count, reward) => `§a[受注中]§r ${title}\n${itemName} x${count} / ${reward}E`,
+    en: (title, itemName, count, reward) => `§a[Claimed]§r ${title}\n${itemName} x${count} / ${reward}E`
+  },
+  villageBoardSlot: {
+    ja: (village, dist, itemName, taken, need, unit) => `${village}(${dist}m)\n${itemName} 受注済み ${taken}/${need} 個 ・ 1個 ${unit}E`,
+    en: (village, dist, itemName, taken, need, unit) => `${village} (${dist}m)\n${itemName} ordered ${taken}/${need} - ${unit}E each`
+  },
+  villageBoardSlotFull: {
+    ja: (village, dist, itemName, taken, need) => `§7${village}(${dist}m)\n${itemName} 受注済み ${taken}/${need} 個 ・ 村の倉庫はいっぱい§r`,
+    en: (village, dist, itemName, taken, need) => `§7${village} (${dist}m)\n${itemName} ordered ${taken}/${need} - the village storehouse is full§r`
+  },
+  villageBoardEntry: {
+    ja: (name, dist, open, total, free) => `${name}(${dist}m)\n受けられる依頼 ${open}/${total} 品目 ・ 村の空き資金 ${free}E`,
+    en: (name, dist, open, total, free) => `${name} (${dist}m)\nOpen requests ${open}/${total} - free funds ${free}E`
+  },
+  companyBoardEntry: {
+    ja: (name, dist, open, total, free) => `${name}(${dist}m)\n受けられる依頼 ${open}/${total} 品目 ・ 会社の空き資金 ${free}E`,
+    en: (name, dist, open, total, free) => `${name} (${dist}m)\nOpen requests ${open}/${total} - free funds ${free}E`
+  },
+  villageScreenBody: {
+    ja: (dist, cash, reserved, free, max, active) => `この村が、きょうあなたに出している依頼です(距離 ${dist}m)。品目も量も、人ごと・日ごとに変わります。\n村の資金: ${cash}E(受注で予約済み ${reserved}E → 新しく約束できるのは ${free}E)\n§7村の資金で払える数までしか受けられません。資金は週の締めに開発銀行機構から補充されます。\n同時に受けられるのは ${max} 件まで(いま ${active} 件)。`,
+    en: (dist, cash, reserved, free, max, active) => `Requests this village has for you today (${dist}m away). Items and amounts differ per player and per day.\nVillage funds: ${cash}E (${reserved}E reserved by claimed orders -> ${free}E can still be promised)\n§7You can only take what the village can pay for. Funds are topped up by the development bank at the weekly close.\nYou can hold up to ${max} quests at once (now ${active}).`
+  },
+  companyScreenBody: {
+    ja: (dist, cash, reserved, free, max, active) => `この会社の、きょうの依頼です(距離 ${dist}m)。\n会社の資金: ${cash}E(受注で予約済み ${reserved}E → 新しく約束できるのは ${free}E)\n§7依頼が残っていても、会社の資金で払える数までしか受けられません。\n同時に受けられるのは ${max} 件まで(いま ${active} 件)。`,
+    en: (dist, cash, reserved, free, max, active) => `Today's requests of this company (${dist}m away).\nCompany funds: ${cash}E (${reserved}E reserved by claimed orders -> ${free}E can still be promised)\n§7Even if a request remains, you can only take what the company can pay for.\nYou can hold up to ${max} quests at once (now ${active}).`
+  },
+  villageSlotRow: {
+    ja: (item, taken, need, unit, state) => `${item} 受注済み ${taken}/${need} 個 ・ 1個 ${unit}E\n${state}`,
+    en: (item, taken, need, unit, state) => `${item} ordered ${taken}/${need} - ${unit}E each\n${state}`
+  },
+  villageGoneMsg: { ja: "§eこの依頼は、発注元が無くなった(解散など)ため納品できません。放棄して構いません。品物は取られていません。", en: "§eThis order can no longer be delivered because the issuer is gone. You may abandon it; no items were taken." },
+  villageStateCan: { ja: (n) => `§a今 ${n} 個まで受けられます§r`, en: (n) => `§aYou can take up to ${n} now§r` },
+  villageStateFull: { ja: "§7きょうの分は受注済み§r", en: "§7Today's share taken§r" },
+  companyStateFull: { ja: "§7会社の倉庫はいっぱい§r", en: "§7Storehouse full§r" },
+  villageStateNoFunds: { ja: "§e資金が足りず受けられません§r", en: "§eNot enough funds§r" },
+  villageSlotFullMsg: { ja: "§eこの品は、きょうのあなたの分は受注済みです。明日また新しい依頼が出ます。", en: "§eYou have already taken today's share of this item. New requests appear tomorrow." },
+  villageNoFundsMsg: { ja: "§e村の資金が足りず、これ以上は受けられません。", en: "§eThe village cannot afford more orders right now." },
+  villageAlreadyMsg: { ja: "§eこの村のこの品は、きょう既に受けています。", en: "§eYou have already taken this order from this village today." },
+  villageOrderTitle: { ja: (village, itemName) => `${village}: ${itemName}`, en: (village, itemName) => `${village}: ${itemName}` },
+  villageClaimedMsg: {
+    ja: (village, itemName, count, reward) => `§a受注しました: ${village} へ ${itemName} x${count}(報酬 ${reward} E)。今週中に納品してください。`,
+    en: (village, itemName, count, reward) => `§aOrder taken: ${itemName} x${count} for ${village} (${reward} E). Deliver within this week.`
+  },
+  villageOrderBody: {
+    ja: (title, itemName, count, reward, hint) => `${title}\n${itemName} を ${count} 個納品\n報酬: ${reward} E(村の資金から)\n\n${hint}`,
+    en: (title, itemName, count, reward, hint) => `${title}\nDeliver ${count} x ${itemName}\nReward: ${reward} E (from the village's funds)\n\n${hint}`
+  },
+  villageDeliverSuccess: { ja: (village, wage) => `§a納品完了！ ${village} から +${wage} E`, en: (village, wage) => `§aDelivered! +${wage} E from ${village}` },
+  villageDeliverShortMsg: {
+    ja: (village, wage, short) => `§e納品しました。${village} の資金が足りず、+${wage} E のみ(不足 ${short} E)`,
+    en: (village, wage, short) => `§eDelivered, but ${village} could only pay +${wage} E (short by ${short} E)`
+  },
+  laborBoardEmptyCompany: {
+    ja: "いまのところ、会社からの依頼はありません。\n§7会社は、工場や在庫で足りない原料(金の原石・ダイヤ・糸)を、自動で依頼に出します。",
+    en: "There are no requests from companies right now.\n§7Companies automatically request raw materials they are short of (raw gold, diamonds, string)."
+  },
+  companyBoardBody: {
+    ja: (max, active) => `会社の工場・在庫で足りない原料の依頼です。同時に受けられるのは ${max} 件まで(いま ${active} 件)。\n数量を決めて受注し、書見台の近くのチェストに入れて納品します。代金は会社の資金から払われます。`,
+    en: (max, active) => `Raw materials companies are short of. You can hold up to ${max} quests at once (now ${active}).\nPick a quantity, then put the goods in a chest near the lectern to deliver. Companies pay from their own funds.`
+  },
+  companyBoardSlotFull: {
+    ja: (name, dist, itemName, taken, need) => `§7${name}(${dist}m)\n${itemName} 受注済み ${taken}/${need} 個 ・ 会社の倉庫はいっぱい§r`,
+    en: (name, dist, itemName, taken, need) => `§7${name} (${dist}m)\n${itemName} ordered ${taken}/${need} - the company's storehouse is full§r`
+  },
+  companySlotFullMsg: { ja: "§e会社の倉庫はいっぱいです。別の会社を探してください。", en: "§eThat company's storehouse is full. Try another company." },
+  companyNoFundsMsg: { ja: "§e会社の資金が足りず、これ以上は受けられません。", en: "§eThe company cannot afford more orders right now." },
+  tutorialTitle: { ja: (done, total) => `導入クエスト (${done}/${total})`, en: (done, total) => `Introductory Quests (${done}/${total})` },
+  tutorialLineDone: { ja: (title) => `§a✔ ${title}§r`, en: (title) => `§a✔ ${title}§r` },
+  tutorialLineNow: { ja: (title) => `§e▶ ${title}§r`, en: (title) => `§e▶ ${title}§r` },
+  tutorialLineLater: { ja: (title) => `§7・ ${title}§r`, en: (title) => `§7- ${title}§r` },
+  tutorialBoardBody: {
+    ja: (max) =>
+      `掲示板には、求人(クエスト)が日替わりで並びます。\n\n・「資格なしの求人」「資格が必要な求人」には、毎日それぞれ決まった仕事が掲示されます。全員が同じ掲示を見ます。\n・仕事を選んで「受注する」を押すと受注中になります。同時に受けられるのは${max}件までで、受注は受けた週の終わりまで有効です。\n・受注中の仕事をもう一度選ぶと、「納品する」か「放棄する」を選べます。\n・報酬は口座に振り込まれます。銀行の「入出金履歴」で、どこから振り込まれたか確認できます。\n\n読んだら報告してください。`,
+    en: (max) =>
+      `The board lists new jobs (quests) every day.\n\n- "Open Jobs" and "Licensed Jobs" each post a set job per day. Everyone sees the same board.\n- Pick a job and press Claim to take it. You can hold up to ${max} at once, and a claim lasts until the end of the week.\n- Select a claimed job again to Deliver or Abandon it.\n- Pay goes into your account. The bank's Account History shows who paid you.\n\nReport in once you have read this.`
+  },
+  tutorialDeliveryBody: {
+    ja: "実際に仕事を1件、納品してみましょう。\n\n1. 「資格なしの求人」から仕事を1つ受注します。\n2. 必要な品物を、書見台の近くのチェスト・樽・シュルカーボックスに入れます。\n3. その仕事をもう一度選んで「納品する」を押します。\n\n納品できたら、ここに戻って報告してください。",
+    en: "Let's deliver a real job.\n\n1. Claim a job from \"Open Jobs\".\n2. Put the required items in a chest, barrel or shulker box near the lectern.\n3. Select the job again and press Deliver.\n\nOnce it is delivered, come back here and report."
+  },
+  tutorialLicenseBody: {
+    ja: "最後に、資格と派遣のしくみです。\n\n・ネザー・水中・エンドの仕事は、その場所で実際に作業してライセンスを取ると受けられます。進み具合は、ロックされた求人を選ぶと見られます。\n・「オーナーズクラブ」では、近くの村人を履歴書に登録して、施設に派遣できます。派遣先には HRMHRM の施設のほか、会社の施設も並びます。\n・「村からのクエスト」「会社からのクエスト」は、今後のアップデートで依頼が掲示されます。\n\n読んだら報告してください。これで導入クエストは完了です。",
+    en: "Finally, licenses and dispatch.\n\n- Nether, Underwater and End jobs unlock once you earn the license by actually working there. Select a locked job to see your progress.\n- At the Owner's Club you can register nearby villagers as resumes and dispatch them to facilities: HRMHRM's, and companies' too.\n- \"Village Quests\" and \"Company Quests\" will be posted in a future update.\n\nReport in once you have read this. That completes the introductory quests."
+  },
+  tutorialStepDoneMsg: { ja: (title) => `§a導入クエスト「${title}」を完了しました。`, en: (title) => `§aCompleted the introductory quest "${title}".` },
+  tutorialAllDoneMsg: { ja: "§a導入クエストをすべて完了しました。掲示板から仕事を選んでみましょう。", en: "§aYou finished all the introductory quests. Pick a job from the boards." },
+  tutorialNotYetMsg: { ja: "§cまだ納品が確認できません。仕事を1件、納品してから報告してください。", en: "§cNo delivery found yet. Deliver one job, then report." }
 };
-
-
