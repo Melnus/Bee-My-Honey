@@ -1,3 +1,4 @@
+import { itemLabel } from "../economy/item-names.js";
 import { getPriceLevel } from "../economy/price-level.js";
 import { creditEmeralds, debitEmeralds, FLOW } from "../economy/ledger.js";
 import { world } from "@minecraft/server";
@@ -13,7 +14,6 @@ import {
   MAX_EMPLOYEES,
   ACCIDENT_SOFT_CAP,
   getAccidentChance,
-  LABOR_ITEM_NAMES,
   LABOR_BIOME_NAMES,
   HRMHRM_ORG_NAME
 } from "../data/labor-data.js";
@@ -106,6 +106,11 @@ export function openStaffMenu(player, lecternLocation) {
 }
 
 // 導入クエスト: 進み具合の一覧と、いまのステップの説明。「報告する」で次へ。
+const rewardList = (lang, items) => items.map((r) => `${itemLabel(r.id, lang)} ×${r.n}`).join(", ");
+function rewardLine(lang, step) {
+  if (!step.rewards?.length) return "";
+  return "\n\n" + t(lang, STR.tutorialRewardLine, rewardList(lang, step.rewards));
+}
 function openTutorialScreen(player, lecternLocation) {
   const lang = getLang(player);
   const step = getCurrentTutorialStep(player);
@@ -114,7 +119,7 @@ function openTutorialScreen(player, lecternLocation) {
   const lines = TUTORIAL_STEPS.map((st, i) =>
     t(lang, i < done ? STR.tutorialLineDone : i === done ? STR.tutorialLineNow : STR.tutorialLineLater, t(lang, st.title))).join("\n");
   const bodyRec = STR[step.bodyKey];
-  const text = t(lang, bodyRec, getMaxActiveQuests());
+  const text = t(lang, bodyRec, getMaxActiveQuests()) + rewardLine(lang, step);
   const form = new ActionFormData()
     .title(t(lang, STR.tutorialTitle, done, TUTORIAL_STEPS.length))
     .body(`${lines}\n\n${text}`)
@@ -127,8 +132,9 @@ function openTutorialScreen(player, lecternLocation) {
     if (r.ok) {
       if (step.id === "first_job") player.sendMessage(t(lang, STR.laborFirstJobDoneMsg));
       player.sendMessage(t(lang, r.finished ? STR.tutorialAllDoneMsg : STR.tutorialStepDoneMsg, t(lang, step.title)));
+      if (r.given?.length) player.sendMessage(t(lang, STR.tutorialRewardGot, rewardList(lang, r.given)));
     } else if (r.reason === "giveFailed") player.sendMessage(t(lang, STR.laborFirstJobFailedMsg));
-    else if (r.reason === "notYet") player.sendMessage(t(lang, STR.tutorialNotYetMsg));
+    else if (r.reason === "notYet") player.sendMessage(t(lang, r.step?.id === "first_delivery" ? STR.tutorialNotYetMsg : STR.tutorialNotYetGeneric));
     return openTutorialScreen(player, lecternLocation);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
@@ -295,8 +301,7 @@ function openLicenseProgressScreen(player, category, lecternLocation) {
   const nextStage = def.stages[state.level ?? 0];
 
   const actionLabel = def.trackAction === "place" ? t(lang, STR.laborLicenseActionPlace) : t(lang, STR.laborLicenseActionBreak);
-  const blockKey = def.blockType.replace("minecraft:", "");
-  const blockName = LABOR_ITEM_NAMES[blockKey] ? t(lang, LABOR_ITEM_NAMES[blockKey]) : blockKey;
+  const blockName = itemLabel(def.blockType, lang);
   const biomeKey = def.biome ? def.biome.replace("minecraft:", "") : null;
   const biomeName = biomeKey ? (LABOR_BIOME_NAMES[biomeKey] ? t(lang, LABOR_BIOME_NAMES[biomeKey]) : biomeKey) : null;
   const biomeNote = biomeName ? t(lang, STR.laborLicenseBiomeNote, biomeName) : "";
@@ -311,11 +316,7 @@ function openLicenseProgressScreen(player, category, lecternLocation) {
   form.show(player).then(() => backToBoard(player, lecternLocation)).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
-function itemDisplayName(itemId, lang) {
-  const key = itemId.replace("minecraft:", "");
-  const entry = LABOR_ITEM_NAMES[key];
-  return entry ? t(lang, entry) : key;
-}
+function itemDisplayName(itemId, lang) { return itemLabel(itemId, lang); }
 
 // クエストの詳細。受注していなければ「受注する」、受注中なら「納品する / 放棄する」(もう一度同じクエストを選ぶと出る)。
 function openQuestDetail(player, questId, lecternLocation) {

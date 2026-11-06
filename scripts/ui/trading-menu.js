@@ -1,3 +1,4 @@
+import { calendarLine } from "../economy/calendar.js";
 import { ActionFormData } from "@minecraft/server-ui";
 import { getLang, setLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
@@ -21,7 +22,7 @@ export function openTradingMenu(player) {
 
   const form = new ActionFormData()
     .title(t(lang, STR.mainTitle))
-    .body(t(lang, STR.mainBody, day, acc.emeralds, netWorth))
+    .body(calendarLine(lang) + "\n" + t(lang, STR.mainBody, day, acc.emeralds, netWorth))
     .button(t(lang, STR.btnBank), "textures/items/emerald")
     .button(t(lang, STR.btnForex), "textures/items/gold_ingot")
     .button(t(lang, STR.btnStock, Object.keys(STOCKS).length), "textures/items/iron_ingot")

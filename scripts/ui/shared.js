@@ -25,11 +25,13 @@ export function promptQuantity(player, { title, max, initial = 1, onSubmit, onBa
   const form = new ModalFormData()
     .title(title)
     .textField(t(lang, STR.qtyFieldLabel, max), t(lang, STR.qtyFieldHint), { defaultValue: String(Math.min(initial, max)) })
-    .toggle(t(lang, STR.qtyAllToggle, max), { defaultValue: false });
+    .toggle(t(lang, STR.qtyAllToggle, max), { defaultValue: false })
+    .toggle(t(lang, STR.formBackToggle), { defaultValue: false }); // 入力フォームには戻るボタンを置けないので、スイッチで戻る
 
   form.show(player).then((res) => {
     if (res.canceled) return onBack();
-    const [raw, useAll] = res.formValues;
+    const [raw, useAll, goBack] = res.formValues;
+    if (goBack) return onBack();
     if (useAll) return onSubmit(max);
     const qty = parseQuantity(raw);
     if (qty === null || qty < 1 || qty > max) {

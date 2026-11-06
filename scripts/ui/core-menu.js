@@ -1,9 +1,12 @@
+import { variantName } from "../data/variant-items-data.js";
+import { jobCounts } from "../economy/village-jobs.js";
 import { world } from "@minecraft/server";
+import { openVillageMenu } from "./village-menu.js";
 import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 import { getLang, t } from "../i18n/lang.js";
 import { STR } from "../i18n/strings.js";
 import { coreName, headName } from "../i18n/names.js";
-import { LABOR_ITEM_NAMES } from "../data/labor-data.js";
+import { itemLabel } from "../economy/item-names.js";
 import { GENRE_NAMES } from "../economy/facility.js";
 import { getEntityAccount, getBalanceSheet } from "../economy/account.js";
 import { getPolicyParam } from "../economy/policy.js";
@@ -114,8 +117,9 @@ export function startRegister(player, block) {
 
 // ---------- 管理メニュー(6ボタン) ----------
 export function openCoreMenu(player, core) {
+  if (core.kind === "village") return openVillageMenu(player, core); // 村は専用の画面(ui/village-menu.js)
   const lang = getLang(player);
-  const v = core.kind === "village";
+  const v = false;
   new ActionFormData()
     .title(t(lang, v ? STR.coreMenuTitleVillage : STR.coreMenuTitleCompany))
     .body(t(lang, STR.coreMenuBody, v, coreName(core, lang), headName(core, lang), core.id))
@@ -234,7 +238,7 @@ export function openManageMenu(player, id) {
     }).catch(warn);
 }
 
-function openDissolveConfirm(player, id) {
+export function openDissolveConfirm(player, id) {
   const core = loadCore(id);
   const lang = getLang(player);
   if (!core || core.ownerId !== player.id) return;
@@ -254,11 +258,7 @@ function openDissolveConfirm(player, id) {
 
 // ---------- 会計管理 / 在庫管理 / 契約管理 ----------
 const fmtN = (n) => Math.round(n).toLocaleString("en-US");
-function itemName(itemId, lang) {
-  const key = String(itemId ?? "").replace("minecraft:", "");
-  const entry = LABOR_ITEM_NAMES[key];
-  return entry ? t(lang, entry) : key;
-}
+function itemName(itemId, lang) { return itemLabel(itemId, lang); }
 function backTo(player, id) {
   const c = loadCore(id);
   if (c) openCoreMenu(player, c);
@@ -292,18 +292,21 @@ export function openStockMenu(player, id) {
     .button(t(lang, STR.coreBtnBack)).show(player).then(() => backTo(player, id)).catch(warn);
 }
 
-// 先週の加工・出荷(村の週次の締め)
+// 先週の出荷(村の週次の締め)。古い記録は made(加工品)で持っている
 function shipLines(core, lang) {
   const s = core.lastShip;
-  if (!s) return t(lang, STR.coreShipNone);
-  const made = Object.entries(s.made ?? {}).map(([id, n]) => `${itemName(id, lang)} x${fmtN(n)}`).join("、") || t(lang, STR.coreContractsNone);
+  const jobs = jobCounts(core).map((j) => `${lang === "en" ? j.en : j.ja} x${j.n}`).join("、");
+  const jobLine = jobs ? "\n" + t(lang, STR.coreJobsLine, jobs, Object.entries(s?.produced ?? {}).map(([id, n]) => `${itemName(id, lang)} x${fmtN(n)}`).join("、") || t(lang, STR.coreContractsNone)) : "";
+  if (!s) return t(lang, STR.coreShipNone) + jobLine;
+  const made = Object.entries(s.shipped ?? s.made ?? {}).map(([id, n]) => `${itemName(id, lang)} x${fmtN(n)}`).join("、") || t(lang, STR.coreContractsNone);
   const used = Object.entries(s.consumed ?? {}).filter(([, n]) => n > 0).map(([id, n]) => `${itemName(id, lang)} x${fmtN(n)}`).join("、") || t(lang, STR.coreContractsNone);
-  return t(lang, STR.coreShipLine, s.week, made, fmtN(s.cash), used);
+  const listedN = Object.values(s.listed ?? {}).reduce((a, n) => a + n, 0);
+  return t(lang, STR.coreShipLine, s.week, made, fmtN(s.cash), used, listedN) + jobLine;
 }
 
 // 今日の必要数(枠)と、受注中・納品済みの注文
-function requestLines(core, lang) {
-  const slots = getVillageSlots(core);
+export function requestLines(core, lang, player = null) {
+  const slots = player ? getVillageSlots(core, undefined, player.name, player.id) : getVillageSlots(core);
   const today = slots.length
     ? slots.map((s) => t(lang, STR.coreSlotLine, itemName(s.itemId, lang), s.taken, s.need, Math.round(s.unit * 10) / 10)).join("\n")
     : t(lang, core.kind === "village" ? STR.coreSlotsNoneVillage : STR.coreSlotsNoneCompany);

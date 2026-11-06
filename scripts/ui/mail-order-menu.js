@@ -67,7 +67,7 @@ function openCategoryList(player) {
 }
 
 // ---------- 通常カタログ（カテゴリ別） ----------
-function openCatalog(player, catKey) {
+export function openCatalog(player, catKey, back = openCategoryList) {
   const lang = getLang(player);
   const acc = getAccount(player);
   const fee = hasMailOrderPrimeStandard(player) ? 0 : getShippingFee();
@@ -83,13 +83,13 @@ function openCatalog(player, catKey) {
   form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === items.length) return openCategoryList(player);
-    handlePurchase(player, items[res.selection], () => openCatalog(player, catKey));
+    if (res.canceled || res.selection === items.length) return back(player);
+    handlePurchase(player, items[res.selection], () => openCatalog(player, catKey, back));
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
 // ---------- 本日のお買い得コーナー（レア5点・割引） ----------
-function openBargainCorner(player) {
+export function openBargainCorner(player, back = openMailOrderMenu) {
   const lang = getLang(player);
   const acc = getAccount(player);
   const items = getTodayBargainItems();
@@ -104,8 +104,8 @@ function openBargainCorner(player) {
   form.button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === items.length) return openMailOrderMenu(player);
-    handlePurchase(player, items[res.selection], () => openBargainCorner(player));
+    if (res.canceled || res.selection === items.length) return back(player);
+    handlePurchase(player, items[res.selection], () => openBargainCorner(player, back));
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
@@ -127,7 +127,7 @@ function handlePurchase(player, item, reopen) {
 }
 
 // ---------- プライム会員管理 ----------
-function openPrimeMenu(player) {
+export function openPrimeMenu(player, back = openMailOrderMenu) {
   const lang = getLang(player);
   const sknValue = Math.round(getSkeinStockValue(player));
   const premiumActive = hasSkeinPrimePremium(player);
@@ -142,7 +142,7 @@ function openPrimeMenu(player) {
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 2) return openMailOrderMenu(player);
+    if (res.canceled || res.selection === 2) return back(player);
     if (res.selection === 0) {
       if (standardActive) {
         unsubscribeMailOrderPrime(player);
@@ -159,12 +159,12 @@ function openPrimeMenu(player) {
         player.sendMessage(t(lang, result.active ? STR.mailPrimePremiumSubMsg : STR.mailPrimePremiumUnsubMsg));
       }
     }
-    openPrimeMenu(player);
+    openPrimeMenu(player, back);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
 // ---------- カード管理（既存機能） ----------
-function openCardManagement(player) {
+export function openCardManagement(player, back = openMailOrderMenu) {
   const lang = getLang(player);
   const acc = getAccount(player);
   const info = getCreditInfo(player);
@@ -177,14 +177,14 @@ function openCardManagement(player) {
       .button(t(lang, STR.back));
 
     form.show(player).then((res) => {
-      if (res.canceled || res.selection === 1) return openMailOrderMenu(player);
+      if (res.canceled || res.selection === 1) return back(player);
       const result = applyForCard(player);
       if (!result.approved) {
         player.sendMessage(t(lang, STR.mailCardDeniedMsg, result.score));
       } else {
         player.sendMessage(t(lang, STR.mailCardIssuedMsg, result.limit, result.minPayment));
       }
-      openMailOrderMenu(player);
+      back(player);
     }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
     return;
   }
@@ -199,24 +199,24 @@ function openCardManagement(player) {
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 2) return openMailOrderMenu(player);
+    if (res.canceled || res.selection === 2) return back(player);
     if (res.selection === 0) {
       const paid = payCardBalance(player, info.cardBalance);
       player.sendMessage(paid > 0 ? t(lang, STR.mailPaidFullMsg, paid) : t(lang, STR.mailNoBalanceOrCashMsg));
-      return openCardManagement(player);
+      return openCardManagement(player, back);
     }
-    if (res.selection === 1) return openDebtReliefMenu(player);
+    if (res.selection === 1) return openDebtReliefMenu(player, (p) => openCardManagement(p, back));
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 
 // カメさんによる債務整理窓口。返済に行き詰まったプレイヤーの救済措置。
-function openDebtReliefMenu(player) {
+export function openDebtReliefMenu(player, back = openCardManagement) {
   const lang = getLang(player);
   const info = getCreditInfo(player);
 
   if (info.cardBalance <= 0) {
     player.sendMessage(t(lang, STR.mailNoDebtMsg));
-    return openCardManagement(player);
+    return back(player);
   }
 
   const form = new ActionFormData()
@@ -227,7 +227,7 @@ function openDebtReliefMenu(player) {
     .button(t(lang, STR.back));
 
   form.show(player).then((res) => {
-    if (res.canceled || res.selection === 2) return openCardManagement(player);
+    if (res.canceled || res.selection === 2) return back(player);
     if (res.selection === 0) {
       const result = restructureCard(player);
       player.sendMessage(t(lang, STR.mailRestructuredMsg, result.newMin));
@@ -235,7 +235,7 @@ function openDebtReliefMenu(player) {
       const result = settleCardDebt(player);
       player.sendMessage(t(lang, STR.mailSettledMsg, result.reduced));
     }
-    openCardManagement(player);
+    back(player);
   }).catch((e) => console.warn("[BeeMyHoney] UI error: " + e));
 }
 

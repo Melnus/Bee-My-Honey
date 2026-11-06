@@ -8,7 +8,7 @@ import { getCurrencyRate, getCurrentCycleDay, getWeekCurrencyRates, buildIconWav
 import { getAccount, getItemCount, removeItem } from "../economy/bank.js";
 import { PB_ITEMS, PB_MOOD_MAX } from "../data/pb-data.js";
 import { hasQualification } from "../economy/labor.js";
-import { openFreshMarket } from "./fresh-market-menu.js";
+import { openExchangeMenu } from "./exchange-menu.js";
 import { ensurePbFresh, getPbStock, getPbBuyPrice, getPbSellPrice, getPbMood, getPbDiscountPercent, petPbCat, giftFishToPbCat, buyFromPb, sellToPb } from "../economy/pb.js";
 
 // ==========================================
@@ -78,7 +78,7 @@ export function openMobTradeMenu(player, currKey) {
   if (currKey === "glow_berry") {
     actions.push({
       label: STR.mobTradeFmBtn,
-      run: () => openFreshMarket(player, () => openMobTradeMenu(player, currKey))
+      run: () => openExchangeMenu(player)
     });
   }
   actions.push({ label: STR.mobTradeRateBtn, run: () => openMobRateInfo(player, currKey) });
