@@ -58,7 +58,7 @@ export const GATHER_RATE_OVERRIDES = {
   "minecraft:nether_wart": 48,
   "minecraft:spore_blossom": 32,
   "minecraft:big_dripleaf": 48,
-  "minecraft:small_dripleaf": 48,
+  "minecraft:small_dripleaf_block": 48,
   "minecraft:sulfur_spike": 32,
   "minecraft:resin_clump": 32,
   "minecraft:pufferfish": 32,

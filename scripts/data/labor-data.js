@@ -171,69 +171,7 @@ export const LICENSES = {
 // 賃金の上下は引き続き RESUME_TIERS(実績件数によるグレード)で決まる。
 export const HRMHRM_ORG_NAME = "HRMHRM Partners HLD";
 
-// ---- クエスト納品物・ライセンス対象ブロックの表示名 ----
-// (UNQUALIFIED_JOBS/QUALIFIED_JOBS の itemId、LICENSES の blockType で使われるIDのみ収録)
-export const LABOR_ITEM_NAMES = {
-  wheat: { ja: "小麦", en: "Wheat" },
-  honeycomb: { ja: "ハニカム", en: "Honeycomb" },
-  cobblestone: { ja: "丸石", en: "Cobblestone" },
-  rotten_flesh: { ja: "腐った肉", en: "Rotten Flesh" },
-  blackstone: { ja: "ブラックストーン", en: "Blackstone" },
-  prismarine_shard: { ja: "プリズマリンの欠片", en: "Prismarine Shard" },
-  end_stone: { ja: "エンドストーン", en: "End Stone" },
-  prismarine_bricks: { ja: "プリズマリンレンガ", en: "Prismarine Bricks" },
-  end_bricks: { ja: "エンドストーンレンガ", en: "End Stone Bricks" },
-  // ---- 施設の産出品(派遣。economy/facility.js) ----
-  carrot: { ja: "ニンジン", en: "Carrot" },
-  potato: { ja: "ジャガイモ", en: "Potato" },
-  beetroot: { ja: "ビートルート", en: "Beetroot" },
-  sugar_cane: { ja: "サトウキビ", en: "Sugar Cane" },
-  pumpkin: { ja: "カボチャ", en: "Pumpkin" },
-  apple: { ja: "リンゴ", en: "Apple" },
-  coal: { ja: "石炭", en: "Coal" },
-  raw_copper: { ja: "銅の原石", en: "Raw Copper" },
-  raw_iron: { ja: "鉄の原石", en: "Raw Iron" },
-  raw_gold: { ja: "金の原石", en: "Raw Gold" },
-  redstone: { ja: "レッドストーン", en: "Redstone" },
-  lapis_lazuli: { ja: "ラピスラズリ", en: "Lapis Lazuli" },
-  diamond: { ja: "ダイヤモンド", en: "Diamond" },
-  bucket: { ja: "バケツ", en: "Bucket" },
-  shears: { ja: "ハサミ", en: "Shears" },
-  piston: { ja: "ピストン", en: "Piston" },
-  compass: { ja: "コンパス", en: "Compass" },
-  clock: { ja: "時計", en: "Clock" },
-  hopper: { ja: "ホッパー", en: "Hopper" },
-  // ---- 村・会社の入荷/出荷(economy/village-demand.js) ----
-  melon_slice: { ja: "スイカ", en: "Melon Slice" },
-  sweet_berries: { ja: "スイートベリー", en: "Sweet Berries" },
-  porkchop: { ja: "生の豚肉", en: "Raw Porkchop" },
-  chicken: { ja: "生の鶏肉", en: "Raw Chicken" },
-  rabbit: { ja: "生のウサギ肉", en: "Raw Rabbit" },
-  cod: { ja: "生のタラ", en: "Raw Cod" },
-  salmon: { ja: "生のサケ", en: "Raw Salmon" },
-  oak_sapling: { ja: "オークの苗木", en: "Oak Sapling" },
-  spruce_sapling: { ja: "マツの苗木", en: "Spruce Sapling" },
-  birch_sapling: { ja: "シラカバの苗木", en: "Birch Sapling" },
-  stick: { ja: "棒", en: "Stick" },
-  feather: { ja: "羽根", en: "Feather" },
-  white_wool: { ja: "羊毛", en: "Wool" },
-  charcoal: { ja: "木炭", en: "Charcoal" },
-  bone_meal: { ja: "骨粉", en: "Bone Meal" },
-  string: { ja: "糸", en: "String" },
-  bread: { ja: "パン", en: "Bread" },
-  pumpkin_pie: { ja: "パンプキンパイ", en: "Pumpkin Pie" },
-  cooked_porkchop: { ja: "焼き豚", en: "Cooked Porkchop" },
-  cooked_chicken: { ja: "焼き鶏肉", en: "Cooked Chicken" },
-  cooked_cod: { ja: "焼きタラ", en: "Cooked Cod" },
-  cooked_salmon: { ja: "焼きサケ", en: "Cooked Salmon" },
-  iron_ingot: { ja: "鉄インゴット", en: "Iron Ingot" },
-  copper_ingot: { ja: "銅インゴット", en: "Copper Ingot" },
-  gold_ingot: { ja: "金インゴット", en: "Gold Ingot" },
-  oak_log: { ja: "オークの原木", en: "Oak Log" },
-  spruce_log: { ja: "マツの原木", en: "Spruce Log" },
-  birch_log: { ja: "シラカバの原木", en: "Birch Log" },
-  sugar: { ja: "砂糖", en: "Sugar" }
-};
+// 品目・ブロックの表示名は、取引リストが正典(economy/item-names.js の itemLabel)。取引リストにない分は data/item-names-extra.js。
 
 // ---- ライセンス対象バイオームの表示名 ----
 // (LICENSES の biome で使われるIDのみ収録)
