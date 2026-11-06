@@ -68,7 +68,7 @@ function ensureIdx() {
     const c = readJson(key, null);
     if (!c?.id) continue;
     seen.add(c.id);
-    if (c.dissolved) continue; // 墓標は索引に入れない
+    if (c.dissolved || c.npc) continue; // 墓標と、位置のない仮想コア(NPC会社。economy/npc-company.js)は索引に入れない
     idx[posKey(c.dimId, c.x, c.y, c.z)] = c.id;
   }
   // 控えにあるのに、記録も墓標もないID = 事故(データ欠損)

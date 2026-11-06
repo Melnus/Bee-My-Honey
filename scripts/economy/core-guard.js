@@ -12,6 +12,8 @@ import { postEntityRequestIfShort, entityShortage } from "./loan-market.js";
 import { reservedCash } from "./village-demand.js";
 import { coreNamePair } from "../i18n/names.js";
 import { stockValue } from "./company-facility.js"; // 会社の仮想施設を、施設の提供元として登録する
+import { detectRegion } from "../data/village-regions.js";
+import { scanJobBlocks, recordJobs, needsJobScan } from "./village-jobs.js";
 import { startRegister, openCoreMenu, countNearby, broadcast } from "../ui/core-menu.js";
 
 // ==========================================
@@ -58,6 +60,7 @@ function checkLoanRequest(core) {
   postEntityRequestIfShort({ id: core.id, kind: core.kind, names: coreNamePair(core) }, acct, reserved, assets);
 }
 
+const jobScanTried = new Map(); // 村ID → 最後に検知を試みたtick(失敗しても毎回は試さない)
 function patrol() {
   resumeDissolutions();
   for (const core of listCores()) {
@@ -68,9 +71,17 @@ function patrol() {
       const ownerOnline = onlineIdsFor(core).has(core.ownerId);
       if (core.kind === "village") {
         const day = world.getDay();
-        if (core.popDay !== day) {
-          const n = countNearby(core);
-          if (n.players.length > 0) recordPopulation(core, n, day); // 近くに誰もいない日は測らない(0扱いにしない)
+        if (!core.region) { // 地域タイプは、鐘の位置のバイオームから一度だけ決める(読めなければ次の見回りで再試行)
+          const rg = detectRegion(core, world.getDimension(core.dimId));
+          if (rg) { core.region = rg; saveCore(core); }
+        }
+        const near = countNearby(core);
+        if (core.popDay !== day && near.players.length > 0) recordPopulation(core, near, day); // 近くに誰もいない日は測らない(0扱いにしない)
+        // 職業ブロックの検知は、人口の記録とは別に、その日に成功するまで見回りのたびに(30秒おきまで)やり直す
+        if (near.players.length > 0 && needsJobScan(core, day) && (jobScanTried.get(core.id) ?? -1e9) + 600 <= system.currentTick) {
+          jobScanTried.set(core.id, system.currentTick);
+          const scan = scanJobBlocks(core, world.getDimension(core.dimId));
+          if (scan) recordJobs(core, scan, day); else console.warn("[BeeMyHoney] job scan: no loaded area around " + core.id + " (will retry)");
         }
       }
       checkLoanRequest(core);

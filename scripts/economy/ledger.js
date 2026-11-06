@@ -16,6 +16,7 @@ import { world, system } from "@minecraft/server";
 //   market     … 市場(ゴーレム・バルク・外貨・株・先物)との交換。資産との交換であり発行ではない
 //   spend      … 送料・プライム・保険料など、サービスへの支払い(回収)
 //   penalty    … 事故補償・違約金など(回収)
+//   org        … 村・会社(組織)からプレイヤーへの払い出し(村の入荷の代金・会社の清算の払い)。プレイヤー側の income とは別の窓口として、インフレの入力に別枠で入れる
 //   conversion … 物理エメラルドとの入出金(アドオン外との境界。発行でも回収でもない)
 // 現状の対象は「口座のエメラルド」のみ。外貨(HNY等)・株・商品は未対応(将来、同じ形で足せる)。
 // ==========================================
@@ -62,6 +63,9 @@ export const FLOW = {
   INSURANCE: "insurance",
   CORE_FEE: "core_fee", // 法人の登録料(HRMHRMの収益)
   TRANSFER_FEE: "transfer_fee", // 送金の手数料(HRMHRMの収益)
+  EXCHANGE_BUY: "exchange_buy", // 取引所でプレイヤーの出品を買う(お金の移動。売り手には exchange_sell)
+  EXCHANGE_SELL: "exchange_sell", // 取引所で出品が売れた代金の受け取り
+  EXCHANGE_FEE: "exchange_fee", // 取引所の出品時の輸送費(取引所の専用口座の収入。HRMHRMの収益ではない)
   // penalty
   LABOR_COMPENSATION: "labor_compensation",
   LABOR_PENALTY: "labor_penalty",
@@ -76,7 +80,7 @@ export const GROUP_OF = {
   loan_disbursed: "credit", loan_repaid: "credit", lend_out: "credit", lend_return: "credit", card_payment: "credit",
   commodity_buy: "market", commodity_sell: "market", bulk_buy: "market", bulk_sell: "market",
   forex_buy: "market", forex_sell: "market", stock_buy: "market", stock_sell: "market",
-  futures_margin: "market", futures_settle: "market", liquidation: "market", village_buy: "market", p2p_lend: "market", p2p_borrow: "market", p2p_repay: "market", p2p_return: "market", transfer_out: "market", transfer_in: "market",
+  futures_margin: "market", futures_settle: "market", liquidation: "org", village_buy: "org", p2p_lend: "market", p2p_borrow: "market", p2p_repay: "market", p2p_return: "market", transfer_out: "market", transfer_in: "market", exchange_buy: "market", exchange_sell: "market", exchange_fee: "spend",
   mail_order: "spend", prime_fee: "spend", insurance: "spend", core_fee: "spend", transfer_fee: "spend",
   labor_compensation: "penalty", labor_penalty: "penalty",
   deposit: "conversion", withdraw: "conversion", migration: "conversion"
@@ -128,7 +132,7 @@ function record(direction, category, amount, playerName) {
   bump(ledger.weeks[wk][direction], category, amount);
   // 活動したプレイヤーの数(income / credit の流れがあった人)。インフレの「1人あたり」の計算に使う。
   const group = GROUP_OF[category];
-  if (playerName && (group === "income" || group === "credit")) {
+  if (playerName && (group === "income" || group === "credit" || group === "org")) {
     const players = (ledger.weeks[wk].players ??= {});
     if (!players[playerName] && Object.keys(players).length < MAX_TRACKED_PLAYERS_PER_WEEK) players[playerName] = 1;
   }
@@ -254,14 +258,15 @@ export function getLedgerReport(weeks = 1) {
 
 // 指定した週(ワールド日÷7の整数部)の集計。インフレ指数の更新(inflation.js)が使う。
 //   netIssuance   … income と credit の in − out(エメラルド)
-//   activePlayers … その週に income / credit の流れがあったプレイヤーの数(古い記録など不明なら0)
+//   orgIssuance   … org(村・会社からの払い出し)の in − out(エメラルド)。インフレでは別枠で扱う
+//   activePlayers … その週に income / credit / org の流れがあったプレイヤーの数(古い記録など不明なら0)
 export function getWeekSummary(week) {
   const ledger = loadLedger();
   const b = ledger.weeks[String(week)];
-  if (!b) return { netIssuance: 0, activePlayers: 0 };
+  if (!b) return { netIssuance: 0, orgIssuance: 0, activePlayers: 0 };
   const g = groupTotals(b);
   const pick = (name) => (g[name] ? g[name].in - g[name].out : 0);
-  return { netIssuance: pick("income") + pick("credit"), activePlayers: Object.keys(b.players ?? {}).length };
+  return { netIssuance: pick("income") + pick("credit"), orgIssuance: pick("org"), activePlayers: Object.keys(b.players ?? {}).length };
 }
 
 // 指定した週のカテゴリ別の in / out をそのまま返す(HRMHRMの会計の週次締め用)。記録が無ければ空。

@@ -19,10 +19,10 @@ import { COMMODITIES } from "../data/market-data.js";
 //   精算不能が INTERVENTION_GRACE_WEEKS(3)週を超えたら介入の対象。
 //     村 … 人口が0なら登録解除(壊滅。残った資産は誰も回収せず消える) / 人口がいれば介入(HRMHRMが入る)
 //     法人 … 内容に応じてHRMHRMが介入(買い取り救済 or 清算。判断の中身は法人テンプレートの実装時に決める)
-//     HRMHRM … 介入の対象外
+//     HRMHRM・取引所 … 介入の対象外(取引所の口座は、保証金・手数料の受け口。足りなければ開発銀行機構が支給する)
 // ==========================================
 
-export const ACCOUNT_TYPES = ["hrmhrm", "village", "company"];
+export const ACCOUNT_TYPES = ["hrmhrm", "village", "company", "exchange", "npc"];
 export const PRECIOUS_METAL_KEYS = ["gold_ingot", "diamond"]; // 「貴金属」として扱う商品(COMMODITIESのキー)
 export const INTERVENTION_GRACE_WEEKS = 3;
 export const WEEKLY_KEEP = 26;
@@ -160,7 +160,7 @@ export function getUnsettledWeeks(acct, week = weekNow()) {
 // action: "none" | "intervene" | "deregister"
 export function decideIntervention(acct, week = weekNow()) {
   const weeks = getUnsettledWeeks(acct, week);
-  if (acct.type === "hrmhrm" || weeks <= INTERVENTION_GRACE_WEEKS) return { action: "none", weeks };
+  if (acct.type === "hrmhrm" || acct.type === "exchange" || weeks <= INTERVENTION_GRACE_WEEKS) return { action: "none", weeks };
   if (acct.type === "village") {
     return (acct.population ?? 0) <= 0 ? { action: "deregister", weeks, reason: "no_population" } : { action: "intervene", weeks, reason: "village_has_population" };
   }

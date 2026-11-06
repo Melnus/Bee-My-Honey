@@ -4,6 +4,8 @@ import { getItemBasePriceExact } from "./village-pricing.js";
 import { getPriceLevel } from "./price-level.js";
 import { getPolicyParam } from "./policy.js";
 import { loadCore, saveCore, listCores } from "./core-registry.js";
+import { coreNamePair } from "../i18n/names.js";
+import { shipToExchange, entityShippingEnabled } from "./exchange.js";
 
 // ==========================================
 // 会社の仮想施設・在庫・契約 / Company Virtual Facilities  (dev/corporate-template-spec.md 第15章)
@@ -111,14 +113,27 @@ registerFacilityProvider({
     const stock = core.stock ?? {};
     let cash = 0;
     const sold = {};
+    const surplusItems = {};
     for (const [itemId, count] of Object.entries(stock)) {
       const surplus = count - keep;
       if (!(surplus > 0)) continue;
-      cash += getItemBasePriceExact(itemId) * level * ratio * surplus;
-      sold[itemId] = surplus;
+      surplusItems[itemId] = surplus;
       stock[itemId] = keep;
     }
-    if (Object.keys(sold).length > 0) { core.stock = stock; saveCore(core); }
-    return { cash: Math.floor(cash), sold };
+    // 保持数を超えた分は、取引所へ出品する(売れた代金は、その時に会社の口座へ入る)。出品できない品と、切り替えが0の時は、従来どおり自動換金する。
+    let toMarket = surplusItems;
+    let listed = {};
+    if (entityShippingEnabled() && Object.keys(surplusItems).length) {
+      const r = shipToExchange({ entityId: accountId, kind: "company", names: coreNamePair(core), items: surplusItems, ratio: getPolicyParam("company_ship_ratio") });
+      listed = r.listed;
+      toMarket = r.unlisted;
+    }
+    for (const [itemId, n] of Object.entries(toMarket)) {
+      cash += getItemBasePriceExact(itemId) * level * ratio * n;
+      sold[itemId] = n;
+    }
+    // 出品に回した分は在庫から減らす。換金に回した分も減っている(上で keep まで引いた)。出品に回せず換金もできなかった分は無い(unlisted はすべて換金)。
+    if (Object.keys(surplusItems).length > 0) { core.stock = stock; saveCore(core); }
+    return { cash: Math.floor(cash), sold, listed };
   }
 });

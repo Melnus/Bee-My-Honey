@@ -154,6 +154,30 @@ export function runHrmhrmWeekly() {
           record.cashDelta += sale.cash;
           record.actions.push({ type: "village_ship", cash: sale.cash });
         }
+        if (sale && sale.spent > 0) {
+          // 職業の原料を取引所で買った代金(週の締めの中で買ったので、ここで口座から引く)
+          acct.cash -= sale.spent;
+          record.expense += sale.spent;
+          record.net -= sale.spent;
+          record.cashDelta -= sale.spent;
+          record.actions.push({ type: "village_purchases", cash: sale.spent });
+        }
+      }
+      if (acct.exchangeRevenue > 0) {
+        // 取引所で、出品した品が売れた代金(売れた時に口座へ入っている)を、この週の収益に数える
+        record.revenue += acct.exchangeRevenue;
+        record.net += acct.exchangeRevenue;
+        record.cashDelta += acct.exchangeRevenue;
+        record.actions.push({ type: "exchange_sales", cash: acct.exchangeRevenue });
+        acct.exchangeRevenue = 0;
+      }
+      if (acct.exchangeExpense > 0) {
+        // 取引所で原料などを買った代金(買った時に口座から出ている)を、この週の費用に数える
+        record.expense += acct.exchangeExpense;
+        record.net -= acct.exchangeExpense;
+        record.cashDelta -= acct.exchangeExpense;
+        record.actions.push({ type: "exchange_purchases", cash: acct.exchangeExpense });
+        acct.exchangeExpense = 0;
       }
       if (id !== HRMHRM_ID) settleEntityLoans(acct, record); // 村・会社が借りたローンの返済(貸し手へ)
       runManagement(acct, record);

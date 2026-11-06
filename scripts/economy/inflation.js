@@ -9,6 +9,8 @@ import { getPriceIndex, setPriceIndex, getPriceLevel } from "./price-level.js";
 //   活動量  … 台帳の income + credit の純増(エメラルド)を、アクティブなプレイヤー1人あたり・ベース単位に直したもの
 //   圧力    = 1人あたり純増(ベース) ÷ INFLATION_REFERENCE_WEEKLY_INCOME (週の標準的な収入の目安)
 //   週の上昇率 = INFLATION_WEEKLY_CAP × tanh(圧力)   … 上限で頭打ち。圧力が大きくても上限を超えない
+//   村・会社の払い出し(台帳の org グループ。村の入荷の代金・会社の清算の払い)は、プレイヤー側の income とは別の窓口として、
+//   同じ形で別枠に計算して足す(労働市場と家計を分けるのと同じ考え方)。上限も別(INFLATION_ORG_WEEKLY_CAP)。
 //   下方硬直: 純増が負でも指数は下げない(0止まり)。プレイヤー不在の週は凍結(上昇率0)。
 // 上限は「4週で約0.2%」(= 1週0.05%)。ワールドの1週間は7日なので、現実の時間で約2時間20分。
 // 欠けた週(誰もログインしていない・日付が飛んだ)は、台帳に記録が無ければ上昇率0として順に処理する(追いつき方式)。
@@ -16,16 +18,18 @@ import { getPriceIndex, setPriceIndex, getPriceLevel } from "./price-level.js";
 // ==========================================
 
 export const INFLATION_WEEKLY_CAP = 0.0005; // 0.05% / 週
+export const INFLATION_ORG_WEEKLY_CAP = 0.0003; // 村・会社の払い出しの枠: 0.03% / 週(合計の上限は 0.08% / 週)
 export const INFLATION_REFERENCE_WEEKLY_INCOME = 70; // 1人あたり週の標準的な収入(ベース単位E)。手間賃10E × 約7日
 const INFLATION_WEEK_KEY = "bmh_inflation_week"; // 最後に処理した「終わった週」
 const INFLATION_LAST_RATE_KEY = "bmh_inflation_last_rate";
 const MAX_CATCH_UP_WEEKS = 520; // 異常な日付ジャンプで長いループにならないように(約10年分)
 
-// 純粋関数: 1週ぶんの上昇率。
-export function weeklyGrowthRate(netIssuanceBase, activePlayers) {
+// 純粋関数: 1週ぶんの上昇率。プレイヤー側の枠 + 村・会社の枠(orgIssuanceBase。省略すると0)。
+export function weeklyGrowthRate(netIssuanceBase, activePlayers, orgIssuanceBase = 0) {
   if (!(activePlayers > 0)) return 0;
   const pressure = netIssuanceBase / activePlayers / INFLATION_REFERENCE_WEEKLY_INCOME;
-  return Math.max(0, INFLATION_WEEKLY_CAP * Math.tanh(pressure));
+  const orgPressure = orgIssuanceBase / activePlayers / INFLATION_REFERENCE_WEEKLY_INCOME;
+  return Math.max(0, INFLATION_WEEKLY_CAP * Math.tanh(pressure)) + Math.max(0, INFLATION_ORG_WEEKLY_CAP * Math.tanh(orgPressure));
 }
 
 // 終わった週(今週より前)を、未処理のぶんだけ順に反映する。戻り値は反映した週数。
@@ -45,10 +49,10 @@ export function updatePriceIndex() {
   let index = getPriceIndex();
   let lastRate = 0;
   for (let w = from; w <= to; w++) {
-    const { netIssuance, activePlayers } = getWeekSummary(w);
+    const { netIssuance, orgIssuance, activePlayers } = getWeekSummary(w);
     // 台帳はエメラルドの実額で持っているので、その時点の水準でベース単位に戻す
-    const netBase = netIssuance / getPriceLevel();
-    lastRate = weeklyGrowthRate(netBase, activePlayers);
+    const level = getPriceLevel();
+    lastRate = weeklyGrowthRate(netIssuance / level, activePlayers, orgIssuance / level);
     index *= 1 + lastRate;
   }
   setPriceIndex(index);

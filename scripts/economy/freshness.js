@@ -7,6 +7,7 @@ import {
   ROTTEN_ITEM_ID,
   getFoodCategory
 } from "../data/food-data.js";
+import { LORE_MARK, HEX_LEN, TAIL_RE, freshnessPercent } from "./freshness-lore.js";
 
 // ==========================================
 // 食品の鮮度システム(在庫側): tick制・日単位スタンプ
@@ -96,9 +97,6 @@ function dayOf(clock) {
 
 // ---- スタンプ(loreに埋め込む) ----
 
-const LORE_MARK = "§r§r"; // 自前の行の目印(見た目には影響しない)
-const HEX_LEN = 5; // age / seen をそれぞれ5桁の16進で持つ
-const TAIL_RE = new RegExp("§r((?:§[0-9a-f]){" + HEX_LEN * 2 + "})$");
 
 // 数値 → 「§1§a§0…」(色コードだけなので画面には何も出ない)
 function encodeHidden(n) {
@@ -139,11 +137,6 @@ function readStamp(stack) {
 }
 
 // ---- 説明文(鮮度表示 + スタンプ) ----
-
-function freshnessPercent(age, category) {
-  const life = FOOD_SHELF_LIFE_TICKS[category];
-  return Math.max(0, Math.min(100, Math.round((1 - age / life) * 100)));
-}
 
 // スタンプと鮮度表示をloreに書く。loreが変わったら true、書けなかった/変化なしは false。
 function writeStamp(stack, age, seen, category, lang) {

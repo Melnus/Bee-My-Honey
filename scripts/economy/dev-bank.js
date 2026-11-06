@@ -47,6 +47,18 @@ function saveState(state) {
   world.setDynamicProperty(STATE_KEY, JSON.stringify(state));
 }
 
+// 開業の資金(NPC会社など、最初から口座を持つ主体へ)。申請の審査を待たずに、最低限の資金を支給する(新しく発行するエメラルド。支給の累計に積む)。
+export function grantStartupFunds(entityId, amount) {
+  const acct = getEntityAccount(entityId);
+  if (!acct || !(amount > 0)) return 0;
+  acct.cash += amount;
+  saveEntityAccount(acct);
+  const state = loadState();
+  state.grantedTotal += amount;
+  saveState(state);
+  return amount;
+}
+
 export function getDevBankState() {
   return loadState();
 }

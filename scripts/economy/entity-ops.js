@@ -27,6 +27,15 @@ export const MANAGEMENT_PROFILES = {
     minReserveBase: 2000, targetReserveBase: 5000, investAboveBase: 20000, invest: false,
     maxTradeFractionPerWeek: 0.05, tradeSlippage: 0.03, marketImpactFactor: 0.25
   },
+  // NPC会社(株式市場の各社。economy/npc-company.js)。原料を買って加工して売る小さな会社。資金は開発銀行から。
+  npc: {
+    minReserveBase: 1500, targetReserveBase: 3000, investAboveBase: 1e12, invest: false,
+    maxTradeFractionPerWeek: 0, tradeSlippage: 0.03, marketImpactFactor: 0.25
+  },
+  exchange: {
+    minReserveBase: 500, targetReserveBase: 1000, investAboveBase: 1e12, invest: false,
+    maxTradeFractionPerWeek: 0, tradeSlippage: 0.03, marketImpactFactor: 0.25
+  },
   village: {
     minReserveBase: 500, targetReserveBase: 1000, investAboveBase: 5000, invest: false,
     maxTradeFractionPerWeek: 0.05, tradeSlippage: 0.03, marketImpactFactor: 0.25

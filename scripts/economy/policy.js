@@ -133,7 +133,7 @@ export const POLICY_PARAMS = {
   },
   convert_loss: {
     unit: "ratio", default: 0.8, min: 0.3, max: 1, maxStep: 0.1, cooldownWeeks: 1,
-    label: { ja: "村: 加工の変換比(損失込み)", en: "Village: processing yield" },
+    label: { ja: "工場: 加工の変換比(損失込み)", en: "Factory: processing yield" },
     desc: { ja: "加工の出来高 = 変換表の数 × この値(切り捨て)。1にすると損失なし", en: "Output = recipe output x this value (rounded down)" }
   },
   // ---- 個人間ローン・送金(loan-market.js / transfer.js) ----
@@ -172,6 +172,106 @@ export const POLICY_PARAMS = {
     unit: "days", default: 30, min: 7, max: 120, maxStep: 7, cooldownWeeks: 1,
     label: { ja: "法人: 1人会社が消えるまでの不在日数", en: "Corporate: absent days before a one-person company is dissolved" },
     desc: { ja: "メンバーがいない会社の社長が、この日数を超えて不在だと強制解散になる", en: "A company with no members is force-dissolved once its president has been absent this long" }
+  },
+  exchange_listing_fee_rate: {
+    unit: "ratio", default: 0.02, min: 0, max: 0.2, maxStep: 0.01, cooldownWeeks: 1,
+    label: { ja: "取引所: 出品時の輸送費の割合", en: "Exchange: listing freight rate" },
+    desc: { ja: "出品する時に、出品額(数量×単価)に対して出品者が払う輸送費。取引所の専用口座の収入になる(返金なし)", en: "Freight the seller pays when listing, as a share of the listing value. It goes to the exchange account (not refunded)" }
+  },
+  exchange_listing_days: {
+    unit: "days", default: 14, min: 3, max: 60, maxStep: 7, cooldownWeeks: 1,
+    label: { ja: "取引所: 出品の期限(日)", en: "Exchange: listing lifetime (days)" },
+    desc: { ja: "売れ残った出品はこの日数で終わり、残りの品は出品者の取引所プールへ戻る", en: "Unsold listings end after this many days and the rest returns to the seller's exchange pool" }
+  },
+  exchange_max_listings: {
+    unit: "count", default: 10, min: 1, max: 50, maxStep: 5, cooldownWeeks: 1,
+    label: { ja: "取引所: 1人あたりの出品数の上限", en: "Exchange: max listings per seller" },
+    desc: { ja: "1人が同時に出せる出品の数(値下げ競争や保存容量への対策)", en: "How many listings one player can have at once" }
+  },
+  exchange_entity_shipping: {
+    unit: "count", default: 1, min: 0, max: 1, maxStep: 1, cooldownWeeks: 1,
+    label: { ja: "取引所: 村・会社の出荷を出品にする(1=出品 / 0=従来の自動売却)", en: "Exchange: villages and companies ship by listing (1 = list, 0 = old auto-sale)" },
+    desc: { ja: "1なら、村・会社が週の締めに出荷する品は、取引所に出品される(売れた代金がその口座に入る)。0なら、従来どおり相場以下で自動売却する", en: "1: goods that villages and companies ship at week close are listed on the exchange and the proceeds go to their account. 0: the old automatic sale below market" }
+  },
+  npc_company_enabled: {
+    unit: "count", default: 1, min: 0, max: 1, maxStep: 1, cooldownWeeks: 1,
+    label: { ja: "NPC会社: 稼働(1=稼働 / 0=冬眠)", en: "NPC companies: active (1 = active, 0 = hibernating)" },
+    desc: { ja: "1なら、株式市場の各社(NPC会社)が毎日、原料を買って加工し、製品を取引所に出品する。0なら全社が冬眠する(株式だけが残る)。プレイヤーの会社が育ったら冬眠させる想定", en: "1: the stock-market NPC companies buy raw materials, process them and list products every day. 0: all hibernate (only the stock remains)" }
+  },
+  npc_price_ratio: {
+    unit: "ratio", default: 0.9, min: 0.5, max: 1, maxStep: 0.05, cooldownWeeks: 1,
+    label: { ja: "NPC会社: 製品の売値(HRMHRMの売値に対する掛け率)", en: "NPC companies: product price (ratio of HRMHRM's price)" },
+    desc: { ja: "NPC会社の出品単価 = HRMHRMの売値 × この掛け率。原価を割る場合は出品しない", en: "NPC listing price = HRMHRM's price x this ratio. Not listed if below cost" }
+  },
+  npc_runs_per_day: {
+    unit: "count", default: 16, min: 1, max: 128, maxStep: 8, cooldownWeeks: 1,
+    label: { ja: "NPC会社: 1日の加工の回数(レシピごと)", en: "NPC companies: processing runs per day (per recipe)" },
+    desc: { ja: "レシピごとに1日にこの回数まで加工する(原料が足りなければ、買えた分だけ)", en: "Each recipe runs up to this many times per day (as far as materials allow)" }
+  },
+  npc_startup_base: {
+    unit: "base", default: 4000, min: 500, max: 50000, maxStep: 2000, cooldownWeeks: 1,
+    label: { ja: "NPC会社: 開業の資金(ベース単位E)", en: "NPC companies: startup funds (base E)" },
+    desc: { ja: "NPC会社の口座を作った最初の日に、開発銀行が支給する資金(×掛率)。以降の不足は、会社と同じ週次の申請になる", en: "Funds granted by the development bank on day one (x price level). After that, shortfalls follow the usual weekly application" }
+  },
+  hrmhrm_exchange_buy_ratio: {
+    unit: "ratio", default: 0.9, min: 0, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "HRMHRM: 取引所での仕入れの単価(基準価格に対する掛け率)", en: "HRMHRM: exchange purchase price (ratio of base price)" },
+    desc: { ja: "HRMHRMは、常設出品の在庫が足りない品を、取引所の出品からこの単価(基準価格 × 掛率 × この掛け率)まで買う。0で買わない", en: "HRMHRM buys items its standing stock lacks from exchange listings up to base price x price level x this ratio. 0 disables" }
+  },
+  hrmhrm_buy_budget_ratio: {
+    unit: "ratio", default: 0.002, min: 0, max: 0.05, maxStep: 0.002, cooldownWeeks: 1,
+    label: { ja: "HRMHRM: 取引所での仕入れの1日の予算(現金に対する割合)", en: "HRMHRM: daily exchange purchase budget (share of cash)" },
+    desc: { ja: "HRMHRMが1日に取引所の仕入れに使える額 = HRMHRMの現金 × この割合。0で買わない", en: "Amount HRMHRM can spend on exchange purchases per day = its cash x this ratio. 0 disables" }
+  },
+  village_job_runs: {
+    unit: "count", default: 16, min: 1, max: 128, maxStep: 8, cooldownWeeks: 1,
+    label: { ja: "村: 職業ブロック1つの1日の加工回数", en: "Village: processing runs per job block per day" },
+    desc: { ja: "村の範囲にある職業ブロック(堆肥箱・燻製器など)1つにつき、1日にこの回数まで加工できる(手工業の量)", en: "Each job block in the village range (composter, smoker, ...) can process this many times per day (hand-craft scale)" }
+  },
+  village_product_ratio: {
+    unit: "ratio", default: 1.1, min: 0.8, max: 1.25, maxStep: 0.05, cooldownWeeks: 1,
+    label: { ja: "村: 加工品の出品の掛け率", en: "Village: product listing ratio" },
+    desc: { ja: "村が職業ブロックで作った品の出品単価 = 基準価格 × 掛率 × この掛け率。HRMHRMの売値(1.25倍)を超えない", en: "Listing price of goods a village makes with its job blocks = base x price level x this ratio. Never above HRMHRM's price" }
+  },
+  village_storehouse_cap: {
+    unit: "count", default: 1024, min: 128, max: 16384, maxStep: 256, cooldownWeeks: 1,
+    label: { ja: "村: 蔵の上限(総数)", en: "Village: storehouse cap (total items)" },
+    desc: { ja: "村の蔵に入れられる品の総数。届け物を受け取るとき、これを超える分は受け取れない。蔵が上限の75%を超えると、村は「運んでよ」を出す", en: "Total items a village storehouse can hold. Deliveries that would exceed it are refused. Above 75% full, the village posts a carry request." }
+  },
+  village_specialty_per_pop: {
+    unit: "ratio", default: 0.5, min: 0, max: 5, maxStep: 0.25, cooldownWeeks: 1,
+    label: { ja: "村: 特産品の量(人口1人あたり)", en: "Village: specialty output per person" },
+    desc: { ja: "村の地域タイプの特産品が、週の締めに生まれる量 = 人口 × この値 ×(品ごとの係数)。生まれた特産品は取引所へ出品される。0で止まる", en: "Weekly specialty goods of the village's region = population x this x per-item factor. They are listed on the Exchange. 0 turns it off." }
+  },
+  village_trade_budget_ratio: {
+    unit: "ratio", default: 0.15, min: 0, max: 1, maxStep: 0.05, cooldownWeeks: 1,
+    label: { ja: "村: 取引所での仕入れ(村同士の取引)の予算", en: "Village: exchange imports (village-to-village trade) budget" },
+    desc: { ja: "週の締めに、村が地域の需要の品(例: 砂漠の村なら木と食料)を取引所で買う予算の、空き現金に対する割合。買った品は村の中で消費される。0で止まる", en: "Share of free cash a village spends at the weekly close buying goods its region needs (e.g. wood and food for a desert village) on the Exchange. Bought goods are consumed. 0 turns it off." }
+  },
+  village_barter_ratio: {
+    unit: "ratio", default: 0.9, min: 0.5, max: 1, maxStep: 0.05, cooldownWeeks: 1,
+    label: { ja: "村: 物々交換で村が渡す価値の割合", en: "Village: barter value ratio" },
+    desc: { ja: "村の寄り合い所の物々交換で、村が渡す品の価値 = 受け取る品の価値(取引所の基準価格)× この割合。1より小さいほど村に有利", en: "In village barter, the value the village hands over = value received (exchange base price) x this ratio. Below 1 favors the village." }
+  },
+  village_buy_budget_ratio: {
+    unit: "ratio", default: 0.3, min: 0, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "村: 取引所での原料の買いの予算(空き現金に対する割合)", en: "Village: exchange purchase budget (share of free cash)" },
+    desc: { ja: "週の締めに、職業の原料の不足を取引所で買うときの上限。受注中のクエストの予約額を引いた現金のこの割合まで", en: "At the weekly close the village buys missing job inputs on the exchange up to this share of its free cash (after quest reservations)" }
+  },
+  company_ship_ratio: {
+    unit: "ratio", default: 0.8, min: 0.3, max: 1, maxStep: 0.1, cooldownWeeks: 1,
+    label: { ja: "会社: 出荷(取引所への出品)の掛け率", en: "Company: shipping (exchange listing) ratio" },
+    desc: { ja: "会社が在庫の余りを出品する単価 = 基準価格 × 掛率 × この掛け率。HRMHRMの売値(基準 × 1.25 × 掛率)以下にすること", en: "Companies list surplus stock at base price x price level x this ratio. Keep it below HRMHRM's price" }
+  },
+  exchange_hrmhrm_refill_ratio: {
+    unit: "ratio", default: 0.25, min: 0.05, max: 1, maxStep: 0.25, cooldownWeeks: 1,
+    label: { ja: "取引所: HRMHRMの常設出品の補充(1日あたり)", en: "Exchange: HRMHRM standing stock refill per day" },
+    desc: { ja: "HRMHRMの常設出品は実在庫制。1日にこの割合(常設数に対して)ずつ補充される", en: "HRMHRM standing listings are real stock, refilled by this share of the standing amount per day" }
+  },
+  private_shulker_absent_days: {
+    unit: "days", default: 60, min: 14, max: 365, maxStep: 14, cooldownWeeks: 1,
+    label: { ja: "専用シュルカー: 登録が解除されるまでの不在日数", en: "Private shulker: absent days before the registration is released" },
+    desc: { ja: "持ち主がこの日数を超えて不在だと、専用シュルカーの登録(保護)が解除される", en: "The registration (and its protection) is released once the owner has been away for longer than this" }
   },
   village_empty_weeks: {
     unit: "weeks", default: 4, min: 1, max: 26, maxStep: 2, cooldownWeeks: 1,
