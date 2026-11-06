@@ -13,7 +13,7 @@ Bee My Honey is an economic simulation add-on for Minecraft Bedrock Edition. Usi
 | Channel | Version | Notes |
 |---|---|---|
 | Stable | **0.4.5** | Recommended for regular worlds. Includes the 0.4.x features: bulk commodity trading, the Paws & Blackpots energy shop, the Fresh Market and food freshness (0.4.0-0.4.2), and loan management, account history, the daily quest board and dispatch to facilities (0.4.5). |
-| Latest | **0.5.3** | Everything in 0.4.5, plus the 0.5.x features: villages and companies (corporate template, 0.5.1-0.5.2), village and company requests with weekly processing and factory processing (0.5.2), and bilingual names, loan requests between players, villages and companies, and money transfers (0.5.3). Features that first appear in 0.4.x are marked **[0.4]** below, and those that first appear in 0.5.x are marked **[0.5]**. |
+| Latest | **0.6.10** | Everything in 0.4.5, plus the 0.5.x features: villages and companies (corporate template, 0.5.1-0.5.2), village and company requests with weekly processing and factory processing (0.5.2), and bilingual names, loan requests between players, villages and companies, and money transfers (0.5.3), and villages and companies feeding inflation through a separate term, with villages shipping only unconsumed raw materials (0.5.4), and private shulkers (0.5.5), and the Exchange menu replacing Mail Order, with the iron-block spot trade and Fresh Market folded into it (0.5.7-0.5.9), with market rates, search and per-wood boats (0.5.9), and villages and companies shipping through the Exchange (0.5.11), and NPC companies built on the stock-market companies, with a new price order (0.5.12), and villages that detect job blocks and make goods by hand (0.5.13), and HRMHRM buying what its standing stock lacks on the Exchange (0.5.14), and potions and enchanted books on the Exchange with a fifth NPC company, Witcha-Cola (0.6.0), and unified item names with automatic handling of other add-ons' items (0.6.1), and add-on items auto-listed from the pool with 7-day price movement (0.6.2), and auto-listing of vanilla items missing from the trade list (0.6.3), and onboarding up to founding a company with item rewards (0.6.4), perishable food on the Exchange and a village-specific menu with barter (0.6.5), and a fix for job-block detection, the Queen's Calendar with anniversaries, and village carry/urgent events (0.6.6), and six village regions with specialty goods (0.6.7), and a calendar view and village-to-village trade (0.6.9). Features that first appear in 0.4.x are marked **[0.4]** below, and those that first appear in 0.5.x are marked **[0.5]**. |
 
 See [CHANGELOG.md](/CHANGELOG.md) for the full history.
 
@@ -143,8 +143,10 @@ Perishable food in your **inventory** (including the off-hand) slowly spoils and
 ### 11. Insurance
 Marine (drowning), fishing-catch and undersea-asset policies, opened from Bone Block + Flower Pot. Marine insurance pays out on drowning deaths; the others pay a fixed amount on death.
 
-### 12. Mail Order (Skein) & Credit Card
-Use a Lectern with Paper. Shop the catalog by category (fresh goods, household, redstone, gear, enchanted books, rare drops), with daily specials. Apply for a credit card with a limit based on your credit score, and pay with revolving installments (fixed minimum payment). A Prime-style subscription is available.
+### 12. Exchange (formerly Mail Order) & Credit Card
+Use a Lectern with Paper. Since 0.5.7 this opens the Exchange: browse goods by category, buy from HRMHRM's standing listings or other players' listings (cheapest first), and ship your own goods by listing them. Shipping and receiving need a registered private shulker (see Private Shulker). Mail Order's features (below) live on as Today's Picks, Customer Service and Legal Service.
+
+Mail Order details: Shop the catalog by category (fresh goods, household, redstone, gear, enchanted books, rare drops), with daily specials. Apply for a credit card with a limit based on your credit score, and pay with revolving installments (fixed minimum payment). A Prime-style subscription is available.
 
 ### 13. Labor Market (HRMHRM Partners HLD)
 Use a Lectern with a Book.
@@ -160,6 +162,9 @@ Hold a Glow Ink Sac and interact with a **Bell** to register a **village** (free
 - **Staff Service -> Company Quests:** companies post requests for raw materials they are short of (raw gold, diamonds, string).
 - Villages process delivered goods weekly (bread, cooked meat, ingots, logs) and sell them below market. Companies own virtual Farm / Mine / Factory facilities (shown as dispatch destinations); a Factory only processes materials that are in stock.
 - Real-area facilities ("Facilities" button) come in a later update.
+
+#### Private shulker **[0.5]**
+- Tap a shulker box with a book to register it as yours (one per player). A registered shulker cannot be broken (release it from the same menu first), is safe from explosions, and only you can open it. If it disappears from its place, or you stay away for 60+ days, the registration is released. Hoppers, pistons, TNT and similar cannot be placed within 2-3 blocks of it, and ones already there are removed.
 
 #### Loan requests & transfers **[0.5]**
 - Besides bank loans, "Borrow" lets you post a request for a lender (no screening; the rate is higher for lower credit scores). Requests show up under "Lend"; when a lender takes one, the money arrives at once. Requests expire after about 7 days.
@@ -203,7 +208,7 @@ Full bilingual support for English and Japanese.
 ## Credits & Specifications
 
 - Add-on Name: Bee My Honey
-- Version: 0.5.3 (stable: 0.4.5)
+- Version: 0.6.10 (stable: 0.4.5)
 - Author: Melnus
 - Target Platform: Minecraft Bedrock Edition (Script API supported environments)
 

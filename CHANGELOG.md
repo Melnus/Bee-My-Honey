@@ -3,13 +3,297 @@
 All notable changes to Bee My Honey are listed here, newest first.
 
 - **Stable release:** 0.4.5
-- **Latest release:** 0.5.3
+- **Latest release:** 0.6.10
 
 Versions 0.1.1 to 0.3.3 were summarized from the project's development notes. 0.3.2 was an internal snapshot and was never released.
 
 ---
 
-## 0.5.3(0.4.6-0.5.3)
+## 0.6.10
+
+### Fixed
+- **Victory Day was never registered.** The Hero of the Village effect id on Bedrock is `village_hero`, not Java's `hero_of_the_village`, so winning a raid was never detected and the yearly hero grant could not be applied either. Both ids are now checked and applied. If you still have the effect from a recent raid (about 40 minutes), the next patrol registers the day.
+
+---
+
+## 0.6.9
+
+### Added
+- **View the calendar** (ticket: calendar view).
+  - Admin command `/scriptevent bmh:calendar`: prints today's date, whether Victory Day and Villagers' Day are registered (with the recorded day, in both Queen's Era and world-day form), and the next anniversary.
+  - Exchange menu, new button "View the calendar": today's date, the three fixed festivals with days until each, and whether today is one.
+  - Head's Room, new button "View the calendar": Victory Day and Villagers' Day (registered date or "not registered"), whether today is an anniversary, and whether a gift can be claimed. Victory Day sits here because it is a village-defence record; the data is still world-wide, not per village. Villagers' Day is labelled as the day a patrol first saw 20+ villagers.
+  - The calendar shows the recorded day itself, even though a world anniversary only becomes a celebration from the year after it was recorded.
+- **Village-to-village trade** (provisional). At the weekly close a village buys the goods its region needs most (those with a demand weight of 2 or more, other than its own specialties; e.g. wood and food for a desert village, fuel for a snowy one) from the Exchange, spending up to `village_trade_budget_ratio` (default 0.15) of its free cash after job-input purchases. Bought goods are consumed, not stored, so there is no buy-and-resell loop. This gives other villages' and players' listings a buyer; the Storehouse Keeper shows what was bought last week. A village never buys its own listings.
+- New policy parameter `village_trade_budget_ratio` (0 turns it off).
+
+---
+
+## 0.6.8
+
+### Fixed
+- The region block in the Head's Room no longer shows a missing-glyph box between "Suited to" and "Storehouse cap" (a full-width space the game font lacks; now a line break).
+
+---
+
+## 0.6.7
+
+### Added
+- **Village regions** (ticket B, specialty step). Each village is one of six types, decided once from the biome at its bell (fine biome types are ignored; unknown or unreadable counts as Plains and is retried): Plains (standard), Desert (importer), Savanna (livestock), Taiga (hunting and forestry), Snowy (stockpiler), Coastal (trade-dependent).
+  - **Specialty goods**: every week the village makes goods in proportion to its population and lists them on the Exchange (Plains: wheat, bread; Desert: sand, glass, cactus; Savanna: acacia logs, leather, beef; Taiga: spruce logs, sweet berries; Snowy: rabbit, rabbit hide, salmon; Coastal: cod, kelp, sea pickles, ink sacs). Ice, snow, sandstone, prismarine and coral are not on the trade list yet, so they are not included.
+  - **Daily needs lean by region**: Desert wants food and wood, Savanna wants grain, Taiga wants fuel and metal, Snowy wants fuel a lot, Coastal wants food, wood, fuel and metal. Plains is unchanged.
+  - **Storehouse cap**: Snowy villages hold double.
+  - The Head's Room shows the region, specialties, the suited job block (display only) and the cap.
+- New policy parameter `village_specialty_per_pop` (default 0.5; 0 turns specialty goods off).
+
+---
+
+## 0.6.6
+
+### Fixed
+- **Job-block detection never worked on a real device** (ticket 1). Two bugs stacked: the count used `getCapacity()` (which returns the box volume, not the number of matches), and a box that reached into unloaded chunks threw an error that was swallowed silently, so nothing was ever recorded. Now:
+  - The scan is split into chunk-sized boxes. Unloaded boxes are skipped; the rest are counted by iterating the matches. If nothing is loaded the scan reports failure (and logs it).
+  - A partial scan never lowers the previous record; a village keeps what it saw before.
+  - The scan no longer depends on the population check: until it succeeds for the day it is retried on later patrols (at most every 30 seconds per village, only while a player is nearby). Failures are logged.
+- **Job blocks without recipes are listed** (ticket 2). Loom, stonecutter, cartography table, lectern, brewing stand, cauldron, grindstone and smithing table now show in "ask about the work" with "makes nothing for now". The "none yet" text appears only when no job block is detected at all.
+- **Barter respects the order cap** (ticket 3). Barter prunes old orders and refuses when the 300-order cap is reached, like normal orders. The village record is saved before the goods change hands; if saving fails, the swap is cancelled and your item is returned.
+- **Head's Room shows the recorded population** (ticket 4), the same number the rest of the economy uses. The adults/children split is gone.
+
+### Added
+- **Queen's Calendar** (shown in the Exchange and e-trading menus, not the HUD): no leap years, 3 weeks (21 days) = 1 month, 12 months = 1 year. Dates read "Queen's Era year/month/day".
+- **Anniversaries**: Relief Festival (3/21), Genesis Festival (5/17), Harvest Festival (10/7), plus world-specific Victory Day (the day a Hero of the Village was first obtained; on that date every player gets Hero of the Village) and Villagers' Day (the day a village first reached 20 villagers). The village menu shows them with a small gift. Gift contents are provisional.
+- **Village events** (ticket B, steps 4-6, partly): "carry this" (a village in surplus asks you to take goods to another village; hand-carried or by shulker; 2-week deadline; the destination village pays) and "urgent supply" (x1.5 price). Events appear when the storehouse is 75% full of its total-count cap (`village_storehouse_cap`, default 1024). Freshness lowers the payout (80% or more is full price, 50% or less is half).
+- New policy parameters `village_storehouse_cap`, `village_barter_ratio`.
+
+### Not done yet
+- Distance bonus, specialty shipments, village-to-village trade, failure penalty. See dev/MILESTONES.md (M-E).
+
+---
+
+## 0.6.5
+
+### Fixed
+- **Perishable food can be listed on the Exchange again** (ticket A). Since 0.6.0 any item with a lore line was refused, and the Freshness line the freshness system writes counted, so even 100% fresh food was rejected, and NPC companies had nothing to buy. Now the Freshness line is ignored when judging an item:
+  - 80% or more is accepted. The item goes to the pool as a plain item, so it is effectively reset to 100%; the buyer gets a new item that is stamped fresh the first time it is carried.
+  - Below 80% is not accepted. The pull screen lists those items with the reason ("not fresh enough, 80% or more is required") and they stay in the shulker. Exactly 80% passes, 79% does not.
+  - Named, enchanted, damaged or otherwise lore-carrying items are still refused, as before.
+- Village, company and NPC company shipments hold item counts without freshness stamps, so there is nothing to judge there; they are treated as fresh when they are listed.
+
+### Changed
+- **Village-specific menu** (ticket B, steps 1-3). Touching a bell now opens a village menu instead of a copy of the company menu (companies are unchanged):
+  - Go to the Meeting Hall: ask about the work (job blocks and what they make, runs per day), ask what they need (barter), ask about the board (funds, today's needs, open orders).
+  - Ask the Storehouse Keeper: stock and its value, what was made last week, what is listed on the Exchange.
+  - Go to the Head's Room: population (size only), funds, and "cut ties" (the old Dissolve button; only the person who registered the village).
+- **Barter** at the Meeting Hall: hand over an item the village needs today (up to what is left of your daily need) and take goods from the storehouse worth `village_barter_ratio` (default 0.9, favors the village) of the value, at base prices. What you hand over counts toward the day's need, so it cannot be delivered again as a quest.
+- New policy parameter `village_barter_ratio`.
+
+### Not done yet (ticket B, steps 4-6)
+- The event rows (carry-this events, anniversaries, financial and growth events), specialty shipments and village-to-village trade. Several rules still need your decisions; see dev/MILESTONES.md (M-E).
+
+---
+
+## 0.6.4
+
+### Added
+- **Onboarding now runs up to founding a company.** The introductory quests (Staff Service) grow from 4 to 9 steps in three stages:
+  1. Staff Service: first job, how the board works, first delivery, licenses and dispatch (unchanged).
+  2. Exchange: register a private shulker, list something, buy and receive something. These are checked against what you actually did.
+  3. Companies: how villages and companies work (report), then found a company (checked). Founding a company ends the introduction.
+- **Item rewards at every step**, none of them emeralds: lapis lazuli, experience bottles, iron and gold ingots, and 4 diamonds + 32 lapis lazuli for founding a company (the first job still gives a shulker box). The reward is shown on the quest screen and given when you report; a full inventory drops the items at your feet. Amounts are in the `TUTORIAL_STEPS` table (`economy/tutorial-chain.js`).
+- Players who already finished the old 4 steps see the new steps next (steps they have already done can be reported right away).
+
+---
+
+## 0.6.3
+
+### Changed
+- **Auto-listing now covers vanilla items too.** Any plain item that is not in the trade list (items added by a Minecraft update, fireworks and so on, as well as other add-ons' items) can be pulled from the private shulker and listed. Its Exchange page is created on the spot under Rare resources > Other Items (auto-listed). A similar trade-list item is used for the price if one is found; otherwise there is no price match (the seller sets the price, cap 100,000 E). Command blocks, barriers, structure blocks, spawners, bedrock and similar items are never listed. No more updating the trade list by hand for each Minecraft update.
+- Renamed the group "Add-on Items" to "Other Items (auto-listed)". The `bmh:ext` commands work the same.
+
+---
+
+## 0.6.2
+
+### Added
+- **Items from other add-ons are recognized when you put them in the pool.** Pulling an item whose namespace is not `minecraft:` from your private shulker, or listing it, creates its Exchange page on the spot (Rare resources > Add-on Items). If a similar trade-list item exists, it is priced like that item; if not, the item is listed with no price match: you set the price (the cap is a flat 100,000 E), and the 3-day re-check switches it to a priced match if a similar item turns up later.
+- **7-day price movement.** Every purchase (players, villages, companies, NPC companies, HRMHRM, market rate) is recorded as a per-day average unit price for the last 7 days. An item page shows the same bar graph used in the stock market (green = up, red = down), the average price and the change against the previous trading day (for example `[▲+8%]`). Item lists show a small green or red triangle next to the name.
+
+### Changed
+- The pull screen no longer lists plain items that are not in the trade list (they could never be listed). Add-on items are still listed there.
+
+---
+
+## 0.6.1
+
+### Fixed
+- **Item names are now unified.** Every screen (Exchange, quests, villages, companies, NPC companies, license blocks) takes item names from one place: the Exchange trade list, plus a small supplement table for display-only items (job blocks, prismarine shard and so on). The old per-screen name table (`LABOR_ITEM_NAMES`) is gone. Items that showed up as raw IDs (kelp, slime_ball, oak_planks, flint, cocoa_beans, milk_bucket, egg, beef, and the village job blocks) now have names. A dev check confirms that every item ID in the quest, village, NPC and job data has a name.
+- Some names in quest and village screens changed to the trade list's wording (for example raw cod and salmon, spruce log).
+
+### Added
+- **Add-on items (external IDs).** Items from other add-ons (any namespace other than `minecraft:`) are found automatically (`ItemTypes.getAll()`). Each one is matched to the most similar trade-list item by name (same ending, such as `_pickaxe`; an exact name match wins), priced the same as that item, and listed under Rare resources > Add-on Items. Items with no similar item are not listed. Weak matches (only the ending matched and there were many candidates) are flagged.
+- **Re-check every 3 days.** The match and its base price are recomputed; a change of 5% or more (or a different match) updates the item and goes into a history.
+- Admin command `/scriptevent bmh:ext list | check | hist | alias <ID> <similar item> | name <ID> <Japanese name> | forget <ID>`. `alias` pins a price match by hand so the re-check leaves it alone.
+
+---
+
+## 0.6.0
+
+### Added
+- **Potions and enchanted books on the Exchange.** The Exchange now trades by "item + variant" keys (`minecraft:splash_potion#strong_healing`, `minecraft:enchanted_book#sharpness:5`). 125 enchanted-book keys (every enchantment at every level) and 138 potion keys (46 effects x drinkable / splash / lingering) join the trade list (305 -> 568 items, under Rare resources). Names are shown in Japanese and English. They are one per stack, so there is no bulk trading for them.
+- Shipping, delivery to the inbox, private-shulker deposit and pull, and HRMHRM standing stock all work with variant keys. Freezing and wither potions are excluded.
+- **Prices from recipes.** A book costs a book + 3 lapis + labor days (common 1 day, Silk Touch / Efficiency 3, Infinity / Mending 5, halved per level below the maximum). Potions chain water > awkward > effect > long / strong > splash > lingering. Provisional ingredients: mundane = sugar, long mundane = redstone, thick = glowstone dust.
+- **Fifth NPC company: Witcha-Cola (NPCWCC)** brews 12 potions from Exchange ingredients.
+- Together with 0.5.12 to 0.5.14 (NPC companies, village job blocks, HRMHRM buying), this makes the Exchange able to run on its own to some degree. This is the first release for real-device testing of the 0.5.x economy.
+
+### Not verified on a real device yet
+- `Potions.resolve` for all three deliveries, reading potions with the potion component, the enchantment id format from `getEnchantments`, and shulker deposit / pull with variant stacks. See dev/real-device-checklist.md section 25.
+
+---
+
+## 0.5.14
+
+### Added
+- **HRMHRM buys what its standing stock lacks.** Every day, before the usual refill, HRMHRM buys items whose standing stock is below the standing amount from Exchange listings (players, villages, companies, NPC companies), cheapest first, at no more than base price x price level x 0.9 (`hrmhrm_exchange_buy_ratio`), spending at most 0.2% of its cash per day (`hrmhrm_buy_budget_ratio`). Sellers are paid from HRMHRM's account; the purchase counts as the weekly expense. Whatever it could not buy is refilled as before. Set either parameter to 0 to turn it off. This gives players a floor price for common goods: list at or below 90% of base and HRMHRM will take it.
+
+---
+
+## 0.5.13
+
+### Added
+- **Villages detect vanilla job blocks.** Once a day (when a player is nearby) a village counts the job blocks inside its core range (the same box as the population count): composter, smoker, blast furnace, barrel, fletching table, plus loom, stonecutter, cartography table, lectern, brewing stand, cauldron, grindstone and smithing table (detected only for now). The number of villagers only shows the village's size; what the village can do depends on the blocks, because villagers come and go.
+- **Hand-craft production.** Each job block can process up to 16 runs per day (`village_job_runs`): composter (seeds to wheat), smoker (raw to cooked meat), blast furnace (raw iron/copper to ingots), barrel (raw to cooked fish), fletching table (flint, stick, feather to arrows). At the weekly close the village first buys missing inputs on the Exchange (after player deliveries, at most the item's base price, with up to 30% of its free cash, `village_buy_budget_ratio`), then processes, then lists the products on the Exchange at base price x 1.1 (`village_product_ratio`, never above HRMHRM's price). Unused inputs are carried over for up to two weeks of capacity. The cost of the purchases is booked as an expense (`village_purchases`).
+- **Requests follow the job blocks.** A village with job blocks puts its job inputs (for example seeds for a composter, raw meat for a smoker) in its daily requests first, sized by block count rather than population. This is the pre-company player's income: deliver the inputs, the village makes the goods and sells them. A player with a company can instead put bulk goods on the Exchange, and the village buys them itself. Villages without job blocks keep the old fixed list.
+- The village stock screen shows the detected job blocks and last week's processing.
+
+### Notes
+- `/scriptevent bmh:core info <village id>` shows `jobs` (the last count). Detection needs the chunks loaded; if they are not, the last count is kept.
+- HRMHRM buying what it lacks on the Exchange is still open.
+
+---
+
+## 0.5.12
+
+### Added
+- **NPC companies.** Four of the stock-market companies now work as small NPC versions of player companies: McMoonald (bread, cooked meat, cookies, cake), Clattle (arrows, bows, crossbows, shields, iron armor), Pupple (compasses, clocks, leads) and EekBay (cooked fish, dried kelp). Every day each one buys the raw materials it needs from the Exchange (player, village and company listings, up to the item's base price), processes them, and lists its products on the Exchange at 90% of HRMHRM's price. They have no physical headquarters; they run automatically.
+- **Company quests for raw materials.** When the Exchange does not have enough of a raw material, the NPC company posts a delivery request on the company quest board (shown regardless of distance). The player delivers as with any company request and is paid from the company's account; the delivered goods are used the next day. Together this makes each NPC company a sink for those raw materials.
+- **Funding through the Development Bank.** On its first day each NPC company receives startup funds from the Development Bank (`npc_startup_base`); later shortfalls go through the usual weekly funding application. Money spent on the Exchange counts as the weekly expense (`exchange_purchases`).
+- **New policy parameters:** `npc_company_enabled` (1 = active, 0 = all hibernate, leaving only the stock; intended for when player companies and villages have grown), `npc_price_ratio` (0.9), `npc_runs_per_day` (16 runs per recipe), `npc_startup_base`.
+- **Admin:** `/scriptevent bmh:npc` shows each company's cash, stock and open requests; `/scriptevent bmh:npc run` runs the day now.
+- A new account type `npc`; NPC listings show as [NPC] in offers.
+
+### Changed
+- **Price order on the Exchange.** Offers are sorted by price, and at the same price the order is player (including villages and companies), then NPC, then HRMHRM, then the system listing (market rate). For items HRMHRM stocks, the system listing is now never cheaper than HRMHRM's price, so HRMHRM's stock is no longer skipped when the market rate is lower (this showed up with some bulk items).
+
+### Notes
+- Witcha-Cola (potions) is waiting for custom items; Skein, KelpLife and HRMHRM have no products of their own and stay as they are. Villages and HRMHRM buying what they lack on the Exchange is not in yet.
+
+---
+
+## 0.5.11
+
+### Added
+- **Villages and companies ship through the Exchange.** At the weekly close, what a village ships (unconsumed raw materials) and what a company holds above its stock keep are now listed on the Exchange instead of being sold automatically below market. The seller is the village or company account (shown as [Village]/[Company] in offers); when a player buys, the money moves from the buyer's balance to that account and counts as exchange sales in the weekly record. Unsold goods return to the entity's pool when the listing expires and are relisted, merged into one listing per item, the next week. Goods that cannot be listed (not in the trade list) are still sold automatically as before.
+- **New policy parameters:** `exchange_entity_shipping` (1 = list on the exchange, 0 = the old automatic sale; set 0 to revert instantly) and `company_ship_ratio` (0.8; the village keeps `village_ship_ratio`). Listing prices are base x price level x ratio, never above HRMHRM's price.
+- The village stock screen shows the last week's shipping as "listed on the exchange".
+
+### Notes
+- No freight fee is charged to villages and companies yet (pending a recheck of their finances). Their income now depends on players buying; with no buyers it is zero (the Development Bank grants still cover them). In the 12-week simulation the listings total about 20% of what villages pay for deliveries, the same as the old automatic sale would have returned.
+
+---
+
+## 0.5.10
+
+### Fixed
+- **Wrong item IDs, found by checking against the game's item list.** Six items in the new trade list and in the old Mail Order catalog used IDs that do not exist in Bedrock, so those goods could not be delivered: Item Frame (`frame`), Glow Item Frame (`glow_frame`), Bed (`bed`), Shelf (`oak_shelf` etc.), Jack o'Lantern (`lit_pumpkin`), Small Dripleaf (`small_dripleaf_block`). The Mail Order catalog's Shulker Box now uses `undyed_shulker_box`. Price recipes were renamed to match.
+
+### Added
+- **Shelves per wood** (Oak, Spruce, Birch, Jungle, Acacia, Dark Oak, Mangrove, Cherry, Pale Oak, Poplar, Bamboo), 305 items in the trade list.
+- **A "Back" switch on every input form** (quantity, listing, search; the quantity prompt is shared with the bank, stocks, forex and futures screens). Forms cannot hold buttons, so switch it on and submit to go back.
+- A new check against the game's item list (`dev/check_item_ids.mjs`).
+
+---
+
+## 0.5.9
+
+### Added
+- **Market rates folded into the Exchange.** Items that used to trade with the Golem (iron block) now have a standing "Market (system)" offer on their item pages at the live market rate, with unlimited stock; buying picks the cheapest of HRMHRM, players and the market. "Sell at Market" sells goods from your exchange pool at the market rate. Bulk items (marked [Bulk]) trade with the market only in whole shulker lots of 1,728; smaller amounts come from HRMHRM and players. One purchase is capped at 5,184 items. Card (revolving) still covers only HRMHRM's part. Ledger groups are unchanged (commodity_* / bulk_*).
+- **Search.** "Search Items" on the Exchange menu finds items by part of the name: hiragana, katakana, half-width kana, English and item IDs all match (top 40 shown).
+- **Boats per wood.** Oak, Spruce, Birch, Jungle, Acacia, Dark Oak, Mangrove, Cherry, Pale Oak and Poplar boats plus the Bamboo Raft (295 items in the trade list).
+- **Price recipes for the unpriced items**, following similar items (other woods follow oak, flowers follow dandelion, cooked meats follow cooked porkchop, and so on) and keeping tier steps Copper < Iron < Diamond < Netherite.
+
+### Changed
+- The "Trade at Market Rate" button on item pages (which opened the old Golem screen) is replaced by the integrated market offer and "Sell at Market".
+
+---
+
+## 0.5.8
+
+### Changed
+- **Exchange categories rebuilt** from the author's 285-item trade list: Fresh (16) / General Resources (190) / Rare Resources (79), each split into subcategories (Seafood, Meat, Produce, Dairy & Eggs; Minerals, Earth/Stone/Glass, Logs, Planks, Saplings, Crops, Seeds, Flowers, Cooked, Dishes, Mob Drops, Household, Functional, Gear; Rare Minerals, Redstone, Tools, Armor, Other Arms). Every sapling, flower, fish and so on is now its own item (the old "daily" variants no longer collapse into one).
+- **Fresh Market and Spot Trading moved into the Exchange.** The iron block + flower pot now opens the Exchange, and the moss-block window's Fresh Market button points to it. Item pages show markers ([Spoils: 6d/12d], [No spoil], [Bulk]); items that were in the Golem trade get a "Trade at Market Rate" button, and fresh items get a "Fresh Market (GLB)" button.
+- Items with no listings stay visible ("0 listings"); the page says you can be the first seller. Only items on the list can be listed; HRMHRM's standing listings now cover only listed items.
+
+### Notes
+- Not in this version: search, merging the old Fresh Market order board and Golem market prices into the exchange's own offers, and copper-gear pricing recipes (items without a recipe use the generic gather value).
+
+---
+
+## 0.5.7
+
+### Added
+- **Exchange menu.** The lectern + paper entrance, formerly Mail Order, now opens the Exchange: Browse by Item (Fresh / General / Rare; Intangible Assets shows "coming soon"), item pages listing offers (cheapest first; the cheapest offers are used first when you buy), purchase with a quantity prompt and confirmation, Outgoing (pull goods from your private shulker into the exchange pool, list them at a price up to HRMHRM's price, see and withdraw your listings), and Incoming (goods wait here and are delivered to your private shulker; bought goods are delivered immediately when possible).
+- **Card payment.** If your balance falls short on HRMHRM's part of a purchase, the shortfall goes on your card (revolving). Payments to other players always come from your balance, so credit cannot create emeralds for sellers.
+- **Carried over from Mail Order:** Today's Picks, Customer Service (Prime membership and card management) and Legal Service (debt relief). Gear and enchanted books are still bought directly from HRMHRM under Rare Resources.
+
+### Changed
+- Receiving and shipping need a registered private shulker; the menu says so.
+
+---
+
+## 0.5.6
+
+### Added
+- **Exchange engine (groundwork; no menu yet).** The engine that will replace Mail Order: HRMHRM standing listings (real stock, refilled daily, priced at base x 1.25 x level and acting as the price ceiling), player listings from a per-player exchange pool (stocked from the private shulker), cheapest-first purchases, a listing freight fee (default 2% of the listing value, not refunded), listing expiry (default 14 days; the rest returns to the pool), proceeds held for offline sellers until login, arrivals delivered into the private shulker (overflow and unloaded chunks stay in the arrivals list), and a dedicated exchange account (type `exchange`, never intervened on; the development bank tops it up when short). Test it with `/scriptevent bmh:exchange pull|list|offers|buy|mine|cancel|pool|inbox|deliver|refill`. Mail Order itself is unchanged.
+- **New policy parameters:** `exchange_listing_fee_rate`, `exchange_listing_days`, `exchange_max_listings`, `exchange_hrmhrm_refill_ratio`. **New ledger categories:** `exchange_buy`, `exchange_sell` (market), `exchange_fee` (spend).
+
+---
+
+## 0.5.5
+
+### Added
+- **Private shulker.** Tap a shulker box with a book to register it as your private shulker (one per player; moving or releasing it is in the same menu). A registered shulker is protected the same way core blocks are: it cannot be broken (release it first) and is excluded from explosions, and only its owner can open it. If the shulker disappears from its place (pistons, commands), a ten-second patrol releases the registration and tells the owner at the next login if they are away. A registration is released after the owner has been away for more than `private_shulker_absent_days` (default 60). Admin: `/scriptevent bmh:pshulker list | release <player>`. This is groundwork for the upcoming exchange (arrival and shipping boxes); the module already has `depositToPrivateShulker`, `freeSlots` and `getPrivateShulkerBlock` for that. Hoppers, pistons, dispensers, droppers, observers, rails, TNT, TNT/hopper minecarts, respawn anchors and end crystals cannot be placed within 2-3 blocks of a registered shulker; registering is refused while one is nearby, and ones that slip in later are removed every three seconds (blocks drop as items, TNT minecarts are dropped without exploding). The check is skipped while the shulker's chunk is not loaded. Behavior verified with the author's test pack (PrivateShulkerTest002).
+- **New policy parameter:** `private_shulker_absent_days`.
+
+---
+
+## 0.5.4
+
+### Changed
+- **Villages and companies now feed inflation, through a separate term.** Payouts from villages and companies to players (village order payments, liquidation payouts) are a new ledger group, `org`, and are no longer part of `market`. The weekly price index rises by the player-side term (cap 0.05%/week, unchanged) plus an organization term with its own cap (`INFLATION_ORG_WEEKLY_CAP`, 0.03%/week), computed the same way (per active player, tanh-shaped, never negative). The maximum total is 0.08%/week. Like the other inflation constants, it is a safety device outside the policy parameters.
+- **Villages only ship raw materials, and only ones that are not consumed.** Villages no longer process goods at the weekly close. Saplings, sticks, feathers, wool, raw iron/copper and charcoal are shipped below the going price (`village_ship_ratio`); food, bone meal and rotten flesh are consumed in the village (that is what village quests ask for). Processing is left to company and HRMHRM factories. `convert_loss` now applies to factories only.
+
+---
+
+## 0.5.3
+
+### Added
+- **Bilingual names.** A village gets a Japanese and an English name (and head) when it is created; a company registration has your name plus an optional name in the other language (duplicates are checked against both). Everyone sees the name matching their own language. Villagers get English names too. Existing data falls back to the English name looked up from the Japanese one (`i18n/names.js`).
+- **Loan request board.** *Borrow -> Request a lender* posts a request (no screening; the rate follows your credit score). Requests appear under *Lend* as player / village / company requests (the desk's NPC borrowers stay below them). When a lender takes one the money arrives at once; repayments reach the lender every week (at the next login if the lender is offline). A request disappears at the first weekly close at least 7 days after it was posted.
+- **Villages and companies post loan requests** when their free cash (cash minus reserved order funds) falls below twice their target reserve (one request at a time, at most two loans). They repay every weekly close; four missed weeks write the loan off. If a request expires and cash is still below the operating floor, the case becomes an intervention (`loan_unfilled`) and the village or company is liquidated.
+- **Village dissolution refunds HRMHRM.** The remaining cash goes back to HRMHRM instead of the registrant (village funds come from the development bank). Outstanding loans are repaid to lenders first; goods and stock still go to HRMHRM.
+- **Transfers.** Bank -> *Send Money* sends emeralds to an online player. Fee 2% (paid on top by the sender, HRMHRM revenue) and a daily cap of 2,000 E (base) per sender.
+- **Limits and abuse safeguards.** Borrow limit = half of net assets (account, currencies, stocks minus loans; for villages and companies: equity plus stock); lend limit = half of the lender's assets per loan. Villages and companies sell stockpiled goods first (most valuable first) and only request what is still missing. Repaying a player-to-player loan does not raise the credit score. A player-to-player loan that is not settled within its term plus 4 weeks is written off and frees the lender's slot; completion notices are matched by loan ID.
+- **New policy parameters:** `loan_borrow_asset_ratio`, `loan_lend_asset_ratio`, `loan_lend_grace_weeks`, `transfer_fee_rate`, `transfer_daily_cap_base`. **New ledger categories:** `p2p_lend`, `p2p_borrow`, `p2p_repay`, `p2p_return`, `transfer_out`, `transfer_in` (market group: transfers, not issuance) and `transfer_fee` (spend group, HRMHRM revenue).
+
+### Fixed
+- Village and company orders are matched by player ID, so changing a gamer tag no longer strands claimed orders (older orders still match by name).
+- Expired orders no longer count as reserved funds before they are cleaned up.
+- A lender's mailbox that overflows folds the money into the remaining notices instead of dropping it.
+- Loan request IDs keep increasing (they used to be reused when the board was empty).
+
+---
+
+## 0.5.2
 
 ### Added
 - **Corporate template: villages and companies.** Hold a Glow Ink Sac and interact with a **bell** to register a village (free; name and head are random) or a **lodestone** to register a company (you choose the name, up to 10 characters). The registration creates an identity (6-character ID) with its own account. A company costs 15,625 x price level (about 1,000,000 E at the start), paid to HRMHRM and not refunded; one company per person. A village cannot overlap another village's area (+-64 blocks horizontally, +-32 vertically).
@@ -34,17 +318,7 @@ Versions 0.1.1 to 0.3.3 were summarized from the project's development notes. 0.
 - **New policy parameters:** `company_reg_fee`, `company_absent_days`, `village_empty_weeks`, `liquidation_ratio`, `forced_liquidation_ratio`, `dissolve_credit_penalty`, `forced_credit_penalty`, `dissolve_cooldown_days`, `forced_cooldown_days`. Forced dissolution can never be set milder than voluntary.
 
 ---
-- 村・会社・村人の名前を日英対応: 村は作成時に日本語名と英語名(村長も)を同時に生成し、表示は閲覧者の言語に合わせる。会社の登録フォームは「自分の言語の名前」+「もう一方の言語の名前(任意)」で、重複は両方の名前で検査。村人も英語名を持つ。古いデータは日本語名から英語名を引く。(`i18n/names.js`)
-- 借入依頼の掲示板: 「借りる」から「貸し手を募集する」を出せる(審査なし・条件は信用スコアで決まる)。依頼は「貸す」の候補に、個人・村・会社の依頼として並ぶ(下に窓口の融資希望者も残る)。引き受けられると、借り手に即入金。返済は週ごとに貸し手へ届く(貸し手がオフラインなら次のログインで届く)。依頼は掲示から7日以上たった最初の週の締めで消える。
-- 村・会社の借入依頼: 自由に使える現金が目標準備金の2倍を下回ると、その日のうちに依頼を1件出す(最大2件まで借入)。毎週の締めで返済し、4週続けて払えないと貸倒れ(貸し手のスロットは空く)。依頼が消えても現金が運用の下限を割ったままなら、介入案件(loan_unfilled)として清算手続き(強制解散)へ進む。
-- 村の解散: 残った現金はHRMHRMへ戻る(代表者へは払わない)。先に、借りているローンを残りの現金から貸し手へ返す。現物・在庫は従来どおりHRMHRMへ。
-- 個人間の送金: 銀行→「送金する」。オンラインのプレイヤーへ送れる(手数料・1日の上限あり)。
-- 台帳に p2p_lend / p2p_borrow / p2p_repay / p2p_return / transfer_out / transfer_in を追加(どれも市場グループ。発行でも回収でもない。HRMHRMの債権・負債には入らない)。
-- 借入依頼・送金の制限と悪用対策: ①借りられる額は借り手の純資産(口座・外貨・株 − 借入)の半分まで、貸せる額は貸し手の資産の半分まで(`loan_borrow_asset_ratio` / `loan_lend_asset_ratio`)。依頼の一覧に借り手の資産が出る。②村・会社は、不足額をまず溜まっている在庫の物資を売って埋め(高い物から)、それでも足りない分だけを、資産の半分以内で依頼にする。③個人間ローンは、完済しても信用スコアが上がらない(サブ垢との貸し借りでの水増し対策)。④個人間の貸付は、期間+4週(`loan_lend_grace_weeks`)を過ぎても完了の知らせが無ければ貸し倒れで閉じ、貸し手のスロットが固まらない。完了通知は貸付ごとのID(lid)で照合し、別の貸付を閉じない。⑤送金は手数料2%(送り主が上乗せ。HRMHRMの収益 = 台帳 transfer_fee)と、1人1日2000E(ベース)の上限(`transfer_fee_rate` / `transfer_daily_cap_base`)。
-- 依頼IDを増え続ける番号に変更(掲示が空になっても再利用しない)。
-- 長期不在・改名への備え: 村・会社の注文の照合をプレイヤーIDで行う(ゲーマータグを変えても、受けた注文を納品できる。古い注文は名前で照合)。期限切れの注文は、まだ片付いていなくても予約額に数えない(誰も来ない村・会社で資金が固まらず、不足の判定も狂わない)。貸し手の郵便受けが溢れても、受け取るお金は残る通知へ合算して失わない。
-
-## 0.4.5
+## 0.4.5 (unreleased)
 
 ### Added
 - **Loan management.** Bank -> Loan Window -> "Loan Management" shows your borrowing (balance, principal, interest, weekly payment, weeks left) and lending. While you owe money you can repay early: with the toggle off you repay only the principal (the remaining interest follows the weekly schedule and the weekly payment drops); with it on you repay everything including interest and close the loan. Loans taken before this version have no principal record, so "principal only" repays the whole balance.
