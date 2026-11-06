@@ -14,14 +14,18 @@ import { startDevBankScriptEvent } from "./economy/dev-bank.js";
 import { startInsuranceDeathWatch } from "./economy/insurance.js";
 import { startFreshnessPatrol } from "./economy/freshness.js";
 import { startCoreGuard } from "./economy/core-guard.js";
+import { startPrivateShulker } from "./economy/private-shulker-guard.js";
+import { startExchange } from "./economy/exchange.js";
+import { startNpcCompanies } from "./economy/npc-company.js";
+import { startCalendar } from "./economy/calendar.js";
+import { startVillageEvents } from "./economy/village-events.js";
 
 import { hasFlowerPotAbove, summonWanderingTrader, startTraderTetherLoop } from "./trader/wandering-trader.js";
 
 import { openTradingMenu } from "./ui/trading-menu.js";
 import { openMobTradeMenu } from "./ui/mob-trade-menu.js";
-import { openGolemMenu } from "./ui/golem-menu.js";
 import { openInsuranceMenu } from "./ui/insurance-menu.js";
-import { openMailOrderMenu } from "./ui/mail-order-menu.js";
+import { openExchangeMenu } from "./ui/exchange-menu.js";
 import { openLaborMenu } from "./ui/labor-menu.js";
 import { recordLicenseWork } from "./economy/labor.js";
 
@@ -47,6 +51,15 @@ startLedgerScriptEvent(); // 管理用: /scriptevent bmh:ledger [週数] でエ�
 // 法人テンプレート: 鐘=村 / ロードストーン=会社 の登記・固定・日次の保守。管理用: /scriptevent bmh:core list|info|dissolve|purge
 startCoreGuard();
 
+// 専用シュルカー: シュルカーボックスとプレイヤーを1対1で結ぶ(本で触って登録)。壊す・爆発・他人が開くのを防ぐ。管理用: /scriptevent bmh:pshulker list|release
+startPrivateShulker();
+
+// 取引所(0.5.6 の土台。UI と入口は次): 売り手の保留の代金の受け取り(ログイン時)・日次の処理(出品の期限・HRMHRMの在庫の補充)
+startExchange();
+startNpcCompanies();
+startCalendar(); // 女王歴の記念日(戦勝記念日の村の英雄・村民の日の記録)
+startVillageEvents(); // 村の★運んでよ・緊急調達(日次)
+
 // 食品の鮮度(在庫側): プレイヤーのインベントリを5秒ごとに走査し、鮮度のスタンプ(loreに埋め込み)を更新。期限切れは腐った肉に変換
 startFreshnessPatrol();
 
@@ -68,7 +81,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
   // 書見台 + 紙 → 郵便販売メニュー(Skein)。本ではなく紙が起点、植木鉢は不要。
   if (itemStack.typeId === "minecraft:paper" && block.typeId === "minecraft:lectern") {
     event.cancel = true;
-    system.run(() => openMailOrderMenu(player));
+    system.run(() => openExchangeMenu(player));
     return;
   }
 
@@ -109,10 +122,10 @@ world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
     return;
   }
 
-  // 鉄ブロック + 真上に植木鉢 → ゴーレムとの現物資産取引（宝石の実物投資）
+  // 鉄ブロック + 真上に植木鉢 → 取引所(旧・ゴーレムとの現物資産取引。0.5.8から取引所の「相場で取引」に移った)
   if (block.typeId === "minecraft:iron_block" && hasFlowerPotAbove(block)) {
     event.cancel = true;
-    system.run(() => openGolemMenu(player));
+    system.run(() => openExchangeMenu(player));
     return;
   }
 
