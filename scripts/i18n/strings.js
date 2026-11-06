@@ -121,6 +121,7 @@ export const STR = {
     en: (factor) => `§e[Economy update] Prices were re-based, so your balance, loans, card and futures amounts were converted by x${factor} (your wealth measured in days of labor is unchanged).`
   },
   qtyFieldLabel: { ja: (max) => `数量(半角の数字・最大 ${max})`, en: (max) => `Quantity (digits only, max ${max})` },
+  formBackToggle: { ja: "« 戻る(オンにして送信)", en: "« Back (switch on and submit)" },
   qtyFieldHint: { ja: "例: 250", en: "e.g. 250" },
   qtyAllToggle: { ja: (max) => `全額(最大 ${max} をすべて)`, en: (max) => `All (the maximum, ${max})` },
   qtyInvalid: { ja: (max) => `§c数量は 1〜${max} の整数で入力してください。`, en: (max) => `§cEnter a whole number from 1 to ${max}.` },
@@ -290,7 +291,7 @@ export const STR = {
   pbMoodMax: { ja: "§7ネコはもう十分ご機嫌だ。", en: "§7The cat is already in top spirits." },
 
   // v0.3.4 #3: 生鮮市場(GLB窓口=苔ブロックから入るオーダーボード)
-  mobTradeFmBtn: { ja: "●生鮮市場", en: "Fresh Market" },
+  mobTradeFmBtn: { ja: "●取引所(生鮮市場はここへ移りました)", en: "Exchange (Fresh Market moved here)" },
   fmTitle: { ja: "生鮮市場", en: "Fresh Market" },
   fmBody: {
     ja: (bal, cur) => `ウーパールーパーが市場の水槽から顔を出している…\n所持: ${bal} ${cur}\n※実在庫制。誰かが納品しないと品物は並ばない。`,
@@ -1056,6 +1057,52 @@ export const STR = {
     ja: "§c登記済みのブロックは壊せません。触って「経営管理」から解散してください。",
     en: "§cA registered block cannot be broken. Interact with it and dissolve it from Management."
   },
+  // ---- 専用シュルカー(economy/private-shulker.js) ----
+  pshTitle: { ja: "専用シュルカー", en: "Private Shulker" },
+  pshBodyFree: {
+    ja: "このシュルカーボックスは、まだだれにも紐付いていません。\n登録すると、あなた専用になります(1人1つ)。登録したシュルカーは、壊す・爆発から守られ、あなただけが開けます。",
+    en: "This shulker box is not linked to anyone yet.\nRegister it to make it yours (one per player). A registered shulker is protected from breaking and explosions, and only you can open it."
+  },
+  pshBodyFreeHasOther: {
+    ja: (x, y, z) => `このシュルカーボックスは、まだだれにも紐付いていません。\nあなたはすでに別の専用シュルカー(${x}, ${y}, ${z})を持っています。ここへ移すと、そちらの登録は解除されます。`,
+    en: (x, y, z) => `This shulker box is not linked to anyone yet.\nYou already have a private shulker at (${x}, ${y}, ${z}). Moving the registration here releases that one.`
+  },
+  pshBodyMine: {
+    ja: (free, size) => `これはあなたの専用シュルカーです。\n空きスロット: ${free} / ${size}\n登録を解除すると、保護がなくなり、だれでも開けて壊せます。`,
+    en: (free, size) => `This is your private shulker.\nFree slots: ${free} / ${size}\nReleasing it removes the protection; anyone can open and break it.`
+  },
+  pshBtnRegister: { ja: "このシュルカーを登録する", en: "Register this shulker" },
+  pshBtnMove: { ja: "登録をここへ移す", en: "Move my registration here" },
+  pshBtnRelease: { ja: "登録を解除する", en: "Release registration" },
+  pshBtnClose: { ja: "閉じる", en: "Close" },
+  pshRegistered: { ja: "§a専用シュルカーに登録しました。", en: "§aRegistered as your private shulker." },
+  pshMoved: { ja: "§a専用シュルカーの登録を、ここへ移しました。", en: "§aMoved your private shulker registration here." },
+  pshReleased: { ja: "§e専用シュルカーの登録を解除しました。", en: "§eYour private shulker registration was released." },
+  pshTaken: { ja: "§cこのシュルカーは、別のプレイヤーの専用です。", en: "§cThis shulker is another player's private shulker." },
+  pshOthers: {
+    ja: (name) => `§c${name} さんの専用シュルカーです。開けません。`,
+    en: (name) => `§cThis is ${name}'s private shulker. You cannot open it.`
+  },
+  pshBreakBlocked: {
+    ja: "§c専用シュルカーは壊せません。本で触って、登録を解除してから壊してください。",
+    en: "§cA private shulker cannot be broken. Tap it with a book and release the registration first."
+  },
+  pshDanger: {
+    ja: (id, x, y, z) => `§c近くに ${id.replace("minecraft:", "")} (${x}, ${y}, ${z}) があるため、登録できません。`,
+    en: (id, x, y, z) => `§cCannot register: ${id.replace("minecraft:", "")} is nearby at (${x}, ${y}, ${z}).`
+  },
+  pshDangerPlace: {
+    ja: (r) => `§c専用シュルカーの近く(${r}マス以内)には、これを置けません。`,
+    en: (r) => `§cYou cannot place this within ${r} blocks of a private shulker.`
+  },
+  pshSwept: {
+    ja: (b, e) => `§e専用シュルカーの近くの禁止物を撤去しました(ブロック ${b} 個、エンティティ ${e} 個)。`,
+    en: (b, e) => `§eRemoved forbidden items near your private shulker (${b} blocks, ${e} entities).`
+  },
+  pshLost: {
+    ja: (reason) => reason === "absent" ? "§e長く不在だったため、専用シュルカーの登録が解除されました。" : "§e専用シュルカーが元の場所から無くなっていたため、登録が解除されました。",
+    en: (reason) => reason === "absent" ? "§eYour private shulker registration was released because you were away for a long time." : "§eYour private shulker registration was released because the shulker is no longer at its place."
+  },
   coreRestored: {
     ja: (name) => `§e[登記] 「${name}」のコアブロックが消えていたため復元しました。`,
     en: (name) => `§e[Registry] The core block of "${name}" was missing and has been restored.`
@@ -1074,6 +1121,109 @@ export const STR = {
   },
   coreMenuTitleVillage: { ja: "村の管理", en: "Village Management" },
   coreMenuTitleCompany: { ja: "会社の管理", en: "Company Management" },
+  // ---- 村専用の画面(チケットB) / Village-specific menu ----
+  vmBtnMeeting: { ja: "寄り合い所に行く", en: "Go to the Meeting Hall" },
+  vmBtnGate: { ja: "蔵の門番に尋ねる", en: "Ask the Storehouse Keeper" },
+  vmBtnHead: { ja: "村長の部屋に行く", en: "Go to the Head's Room" },
+  vmMeetingTitle: { ja: "寄り合い所", en: "Meeting Hall" },
+  vmMeetingBody: { ja: "村人たちが集まって、あれこれ話している。", en: "Villagers are gathered, chatting." },
+  vmBtnJobs: { ja: "仕事を聞いてみる", en: "Ask about the work" },
+  vmBtnWants: { ja: "欲しいものはないか聞く", en: "Ask what they need" },
+  vmBtnBoard: { ja: "掲示板のことを聞く", en: "Ask about the board" },
+  vmJobsTitle: { ja: "村の仕事", en: "Village Work" },
+  vmJobsNone: { ja: "この村には、職業ブロックがまだ見つかっていない(検知は1日1回、人が近くにいるときに行う)。村の範囲に、堆肥箱・燻製器・溶鉱炉などの職業ブロックを置くと、村人が仕事を始める。", en: "No job blocks detected in this village yet (checked once a day while someone is nearby). Place job blocks such as composters, smokers or blast furnaces in the village range and the villagers will start working." },
+  vmJobsBody: {
+    ja: (lines, perDay) => `村にある職業ブロックと、作れるもの(1ブロックにつき1日 ${perDay} 回まで)。\n\n${lines}\n\n作った品は、蔵に入って取引所に出品される。`,
+    en: (lines, perDay) => `Job blocks in the village and what they make (up to ${perDay} runs per block per day).\n\n${lines}\n\nWhat is made goes to the storehouse and is listed on the Exchange.`
+  },
+  vmJobLine: { ja: (name, n, outs, runs) => `・${name} ×${n}: ${outs} (1日 ${runs} 回)`, en: (name, n, outs, runs) => `- ${name} x${n}: ${outs} (${runs} runs/day)` },
+  vmWantsTitle: { ja: "村の欲しいもの", en: "What the Village Needs" },
+  vmWantsNone: { ja: "今日は、とくに欲しいものはないようだ。", en: "They do not seem to need anything today." },
+  vmWantsBody: {
+    ja: (rate) => `今日、村が欲しがっているものです。手持ちを渡すと、蔵にある品と交換できます(受け取れる価値は、渡した品の ${rate}%)。\n品を選んでください。`,
+    en: (rate) => `What the village wants today. Hand over what you carry to swap it for goods in the storehouse (you get ${rate}% of the value you hand over).\nPick an item.`
+  },
+  vmWantBtn: { ja: (name, left, have) => `${name} (あと${left}個 / 手持ち${have}個)`, en: (name, left, have) => `${name} (${left} more / you have ${have})` },
+  vmBarterNoStock: { ja: "村の蔵には、いま交換に出せる品がない。", en: "The storehouse has nothing to swap right now." },
+  vmBarterNoHave: { ja: "§cその品を持っていません。", en: "§cYou do not have that item." },
+  vmBarterPick: { ja: (name, qty) => `${name} ×${qty} と交換する品を選んでください。`, en: (name, qty) => `Pick what to swap for ${name} x${qty}.` },
+  vmBarterOption: { ja: (name, n, stock) => `${name} ×${n} (蔵に${stock}個)`, en: (name, n, stock) => `${name} x${n} (${stock} in store)` },
+  vmBarterDone: { ja: (give, qty, take, n) => `§a${give} ×${qty} を渡して、${take} ×${n} を受け取りました。`, en: (give, qty, take, n) => `§aGave ${give} x${qty} and received ${take} x${n}.` },
+  vmBarterFail: { ja: "§c交換できませんでした。", en: "§cThe swap did not go through." },
+  vmBoardTitle: { ja: "掲示板のこと", en: "About the Board" },
+  vmBoardBody: {
+    ja: (cash, reserved, today, orders) => `村の資金: ${cash} E(うち受注の予約 ${reserved} E)\n\n§l今日の必要数(あなたの分)§r\n${today}\n\n§l受注中・納品済みの注文§r\n${orders}\n\n仕事は、書見台のスタッフサービスの「村からの依頼」で受けます。`,
+    en: (cash, reserved, today, orders) => `Village funds: ${cash} E (${reserved} E reserved for open orders)\n\n§lToday's needs (yours)§r\n${today}\n\n§lOpen and delivered orders§r\n${orders}\n\nAccept jobs under "From villages" at Staff Service on the lectern.`
+  },
+  vmGateTitle: { ja: "蔵の門番", en: "Storehouse Keeper" },
+  vmGateImported: { ja: (list) => `\n\n§l先週、取引所で仕入れた品§r(地域の需要)\n${list}`, en: (list) => `\n\n§lBought on the Exchange last week§r (regional demand)\n${list}` },
+  vmGateBody: {
+    ja: (stock, value, made, listed) => `「蔵のことなら任せてくれ」\n\n§l蔵の在庫§r(評価額 ${value} E)\n${stock}\n\n§l先週つくった品§r\n${made}\n\n§l取引所に出している品§r\n${listed}`,
+    en: (stock, value, made, listed) => `"Leave the storehouse to me."\n\n§lStock§r (worth ${value} E)\n${stock}\n\n§lMade last week§r\n${made}\n\n§lListed on the Exchange§r\n${listed}`
+  },
+  vmGateListLine: { ja: (name, qty, price, left) => `・${name} ×${qty} (1個 ${price} E・あと${left}日)`, en: (name, qty, price, left) => `- ${name} x${qty} (${price} E each, ${left}d left)` },
+  vmJobLineIdle: { ja: (name, n) => `・${name} ×${n}: いまは何も作らない`, en: (name, n) => `- ${name} x${n}: makes nothing for now` },
+  vmRegionLine: {
+    ja: (name, type, specs, aff, cap) => `\n地域: ${name}(${type})\n特産: ${specs}\n適性: ${aff}\n蔵の上限: ${cap} 個`,
+    en: (name, type, specs, aff, cap) => `\nRegion: ${name} (${type})\nSpecialty: ${specs}\nSuited to: ${aff}\nStorehouse cap: ${cap}`
+  },
+  calBtn: { ja: "カレンダーを見る", en: "View the calendar" },
+  calTitle: { ja: "女王歴のカレンダー", en: "Queen's Calendar" },
+  calExBody: {
+    ja: (date, lines, note) => `今日: ${date}\n${note}\n\n毎年の祭(村以外の記念日):\n${lines}\n\n戦勝記念日・村民の日は、村長の部屋のカレンダーで確かめられます。`,
+    en: (date, lines, note) => `Today: ${date}\n${note}\n\nYearly festivals (non-village):\n${lines}\n\nVictory Day and Villagers' Day are shown in the Head's Room calendar.`
+  },
+  calVillageBody: {
+    ja: (date, victory, villagers, note) => `今日: ${date}\n${note}\n\n${victory}\n${villagers}\n\n※戦勝記念日・村民の日はワールド全体の記録で、村ごとではありません。村民の日は、見回りが初めて人口20人以上を見つけた日の記録です(実際に20人になった日とは限りません)。記録した年の翌年から、記念日になります。`,
+    en: (date, victory, villagers, note) => `Today: ${date}\n${note}\n\n${victory}\n${villagers}\n\nNote: Victory Day and Villagers' Day are world-wide records, not per village. Villagers' Day is the day a patrol first saw 20+ villagers (not necessarily the day it was reached). They become anniversaries from the year after they were recorded.`
+  },
+  calTodayNone: { ja: "今日は記念日ではありません。", en: "Today is not an anniversary." },
+  calTodayIs: { ja: (names) => `★今日は ${names} です。`, en: (names) => `★Today is ${names}.` },
+  calGiftReady: { ja: "贈り物を受け取れます(村メニューの★記念日から)。", en: "A gift is waiting (village menu, ★ anniversary)." },
+  calGiftTaken: { ja: "贈り物は受け取り済みです。", en: "The gift has been claimed." },
+  vmHeadTitle: { ja: "村長の部屋", en: "Head's Room" },
+  vmHeadBody: {
+    ja: (name, head, pop, cash, reserved, free) => `${name}  村長: ${head}\n\n人数: ${pop} 人(記録値)。人数は村の規模を表すだけで、仕事は職業ブロックで決まります。\n村の懐事情: ${cash} E(受注の予約 ${reserved} E・自由に使えるのは ${free} E)`,
+    en: (name, head, pop, cash, reserved, free) => `${name}  Head: ${head}\n\nPopulation: ${pop} (recorded). It only shows size; work is set by job blocks.\nVillage funds: ${cash} E (${reserved} E reserved, ${free} E free)`
+  },
+  vmBtnCutTies: { ja: "§4契約を切る(村の登録を解く)", en: "§4Cut ties (dissolve the village)" },
+  vmCutOnlyOwner: { ja: "§c村の登録を解けるのは、登記した人だけです。", en: "§cOnly the person who registered the village can dissolve it." },
+  // ---- 村のイベント・記念日 / Village events and anniversaries ----
+  vmEvCarryBtn: { ja: (item, qty, dest, days) => `★${item}を運んでよ: ${dest}まで ×${qty} (あと${days}日)`, en: (item, qty, dest, days) => `★Carry ${item} x${qty} to ${dest} (${days}d left)` },
+  vmEvUrgentBtn: { ja: (item, qty, days) => `★緊急調達: ${item}が足りない ×${qty} (あと${days}日)`, en: (item, qty, days) => `★Urgent: we need ${item} x${qty} (${days}d left)` },
+  vmEvCarryBody: {
+    ja: (item, qty, dest, reward, days) => `「蔵がいっぱいでね。${item}を ${qty} 個、${dest}まで運んでくれないか。」\n\n引き受けると、蔵から ${qty} 個が手持ちに渡されます。${dest}の蔵の門番に「届け物を渡す」と、${dest}が報酬を払います(目安 ${reward} E。鮮度のある食品は鮮度で変わる)。\n運ぶのは、手持ちでも専用シュルカーでも構いません。期限はあと${days}日(間に合わなくても罰はありません)。`,
+    en: (item, qty, dest, reward, days) => `"The storehouse is full. Could you carry ${qty} ${item} to ${dest}?"\n\nIf you accept, ${qty} items are handed to you from the storehouse. Give them to ${dest}'s storehouse keeper and ${dest} pays the reward (about ${reward} E; fresh food varies with freshness).\nYou may carry them in your inventory or your private shulker. ${days} days left (no penalty if you miss it).`
+  },
+  vmEvAccept: { ja: "引き受ける", en: "Accept" },
+  vmEvAccepted: { ja: (item, qty, dest) => `§a${item} ×${qty} を預かりました。${dest}の蔵の門番に届けてください。`, en: (item, qty, dest) => `§aYou took ${item} x${qty}. Deliver it to ${dest}'s storehouse keeper.` },
+  vmEvGone: { ja: "§cこの頼みごとは、もうありません。", en: "§cThat request is gone." },
+  vmEvNoStock: { ja: "§c蔵の在庫が足りなくなっていて、引き受けられません。", en: "§cThe storehouse no longer has enough." },
+  vmEvUrgentBody: {
+    ja: (item, qty, unit, have, days) => `「${item}が足りなくて、仕事が止まりそうだ。通常の1.5倍で買うよ。」\n\nあと ${qty} 個、1個 ${unit} E。手持ちと専用シュルカーに ${have} 個あります。期限はあと${days}日。`,
+    en: (item, qty, unit, have, days) => `"We are running out of ${item} and work will stop. We pay 1.5x."\n\n${qty} more, ${unit} E each. You carry ${have} (inventory and private shulker). ${days} days left.`
+  },
+  vmEvDeliver: { ja: "納める", en: "Deliver" },
+  vmEvDelivered: { ja: (item, qty, paid, short) => `§a${item} ×${qty} を納めました。報酬 ${paid} E。${short > 0 ? `(村の資金が足りず、${short} E は払われませんでした)` : ""}`, en: (item, qty, paid, short) => `§aDelivered ${item} x${qty}. Reward ${paid} E.${short > 0 ? ` (The village was short by ${short} E.)` : ""}` },
+  vmEvNone: { ja: "§c納められる品を持っていません。", en: "§cYou have nothing to deliver." },
+  vmEvFull: { ja: "§c蔵がいっぱいで受け取れません。", en: "§cThe storehouse is full." },
+  vmEvNotEnough: { ja: (have, need) => `§c数が足りません(${have}/${need})。`, en: (have, need) => `§cNot enough (${have}/${need}).` },
+  vmGateDeliverBtn: { ja: (n) => `届け物を渡す (${n}件)`, en: (n) => `Hand over a delivery (${n})` },
+  vmGateDeliverTitle: { ja: "届け物を渡す", en: "Hand Over a Delivery" },
+  vmGateDeliverBody: { ja: "あなたが預かっている届け物のうち、この村宛てのものです。", en: "Deliveries you carry that are addressed to this village." },
+  vmGateDeliverLine: { ja: (item, qty, from, days) => `${item} ×${qty} (${from}から・あと${days}日)`, en: (item, qty, from, days) => `${item} x${qty} (from ${from}, ${days}d left)` },
+  vmAnnBtn: { ja: (name) => `★${name}`, en: (name) => `★${name}` },
+  vmAnnBody: {
+    ja: (date, name, note) => `${date}\n\n今日は「${name}」です。\n${note}`,
+    en: (date, name, note) => `${date}\n\nToday is ${name}.\n${note}`
+  },
+  vmAnnNoteGift: { ja: (list) => `村から贈り物があります: ${list}(その年に1回)`, en: (list) => `The village has a gift for you: ${list} (once a year)` },
+  vmAnnNoteClaimed: { ja: "贈り物は、今年はもう受け取りました。", en: "You have already received this year's gift." },
+  vmAnnNoteHero: { ja: "戦勝を祝って、今日は村の英雄がみんなに付与されます。", en: "In honor of the victory, everyone is granted Hero of the Village today." },
+  vmAnnNoteVillagers: { ja: (year) => `女王歴${year}年に、村人が初めて20人に達した日です。`, en: (year) => `The day villagers first reached 20, in Queen's Era ${year}.` },
+  vmAnnClaim: { ja: "贈り物を受け取る", en: "Receive the gift" },
+  vmAnnReceived: { ja: (list) => `§b贈り物を受け取りました: ${list}`, en: (list) => `§bGift received: ${list}` },
+  vmNone: { ja: "(なし)", en: "(none)" },
   coreMenuBody: {
     ja: (isVillage, name, head, id) => `${isVillage ? "村名" : "会社名"}: ${name}\n${isVillage ? "村長" : "社長"}: ${head}\nID: ${id}`,
     en: (isVillage, name, head, id) => `${isVillage ? "Village" : "Company"}: ${name}\n${isVillage ? "Head" : "President"}: ${head}\nID: ${id}`
@@ -1178,13 +1328,13 @@ export const STR = {
   },
   coreContractsNone: { ja: "なし", en: "None" },
   coreStockBodyVillage: {
-    ja: (lines, valueE, ship) => `§l村の在庫§r\n${lines}\n\n在庫の時価: 約 ${valueE} E\n§7スタッフサービスの「村からのクエスト」で納品された物資が、ここに溜まります。週の締めに、パン・焼き肉・インゴット・原木などに加工して、相場より安く市場へ出荷し、代金が村の口座に入ります。加工できない品(作物・腐った肉など)は村の中で消費されます。§r\n\n§l先週の加工・出荷§r\n${ship}`,
-    en: (lines, valueE, ship) => `§lVillage stock§r\n${lines}\n\nStock value: about ${valueE} E\n§7Goods delivered through Staff Service -> Village Quests accumulate here. At the weekly close they are processed (bread, cooked meat, ingots, logs...) and shipped to the market below the going price; the proceeds go to the village account. Goods that cannot be processed (crops, rotten flesh) are consumed in the village.§r\n\n§lLast weekly processing and shipping§r\n${ship}`
+    ja: (lines, valueE, ship) => `§l村の在庫§r\n${lines}\n\n在庫の時価: 約 ${valueE} E\n§7スタッフサービスの「村からのクエスト」で納品された物資が、ここに溜まります。村は加工しません。週の締めに、消費されない原料(苗木・棒・羽根・羊毛・鉄/銅の原石・木炭)だけを取引所に出品し(相場より安い値段。売れた時に代金が村の口座に入ります。取引所に載せられない品は、相場より安く自動で売ります)。食料・骨粉・腐った肉は村の中で消費されます(これが村のクエストの需要です)。§r\n\n§l先週の出荷§r\n${ship}`,
+    en: (lines, valueE, ship) => `§lVillage stock§r\n${lines}\n\nStock value: about ${valueE} E\n§7Goods delivered through Staff Service -> Village Quests accumulate here. Villages do not process goods. At the weekly close only materials that are not consumed (saplings, sticks, feathers, wool, raw iron/copper, charcoal) are listed on the exchange below the going price (the proceeds reach the village account as they sell; goods the exchange cannot list are sold automatically below market). Food, bone meal and rotten flesh are consumed in the village (that is what village quests ask for).§r\n\n§lLast weekly shipping§r\n${ship}`
   },
   coreShipNone: { ja: "まだ週の締めを迎えていません。", en: "No weekly close yet." },
   coreShipLine: {
-    ja: (week, made, cash, used) => `第${week}週: 加工品 ${made} → 出荷収入 ${cash} E\n消費した物資: ${used}`,
-    en: (week, made, cash, used) => `Week ${week}: made ${made} -> shipping income ${cash} E\nConsumed: ${used}`
+    ja: (week, made, cash, used, listed) => `第${week}週: 出荷 ${made} → ${listed > 0 ? `取引所へ出品(${listed}個。売れた分が、売れた時に口座へ入ります)/ 現金で売った分 ${cash} E` : `出荷収入 ${cash} E`}\n消費した物資: ${used}`,
+    en: (week, made, cash, used, listed) => `Week ${week}: shipped ${made} -> ${listed > 0 ? `listed on the exchange (${listed} items; proceeds arrive as they sell) / sold for cash ${cash} E` : `shipping income ${cash} E`}\nConsumed: ${used}`
   },
   coreSlotLine: {
     ja: (item, taken, need, unit) => `・${item} 受注済み ${taken}/${need} 個(1個 ${unit}E)`,
@@ -1344,7 +1494,160 @@ export const STR = {
     ja: "最後に、資格と派遣のしくみです。\n\n・ネザー・水中・エンドの仕事は、その場所で実際に作業してライセンスを取ると受けられます。進み具合は、ロックされた求人を選ぶと見られます。\n・「オーナーズクラブ」では、近くの村人を履歴書に登録して、施設に派遣できます。派遣先には HRMHRM の施設のほか、会社の施設も並びます。\n・「村からのクエスト」「会社からのクエスト」は、今後のアップデートで依頼が掲示されます。\n\n読んだら報告してください。これで導入クエストは完了です。",
     en: "Finally, licenses and dispatch.\n\n- Nether, Underwater and End jobs unlock once you earn the license by actually working there. Select a locked job to see your progress.\n- At the Owner's Club you can register nearby villagers as resumes and dispatch them to facilities: HRMHRM's, and companies' too.\n- \"Village Quests\" and \"Company Quests\" will be posted in a future update.\n\nReport in once you have read this. That completes the introductory quests."
   },
+  tutorialExShulkerBody: {
+    ja: "ここからは取引所です。まず、品物の出し入れに使う「専用シュルカー」を登録します。\n\n1. シュルカーボックスを地面に置きます。\n2. 本を持って、そのシュルカーボックスを触ります。\n3. 「専用に登録する」を選びます(1人1つ)。\n\n登録したシュルカーは、あなただけが開けて、壊せず、爆発からも守られます。登録できたら、ここへ戻って報告してください。",
+    en: "Now the Exchange. First, register a private shulker for moving goods in and out.\n\n1. Place a shulker box on the ground.\n2. Hold the book and use it on the shulker box.\n3. Choose to register it as yours (one per player).\n\nOnly you can open it, and it is protected from breaking and explosions. Once it is registered, come back here and report."
+  },
+  tutorialExListBody: {
+    ja: "次は、取引所に出品します。\n\n1. 売りたい品物を、専用シュルカーに入れます。\n2. 紙を持って書見台を触ると、取引所が開きます。\n3. 「出荷」から専用シュルカーの品物を取り込みます。\n4. 取り込んだ品を、希望の単価で出品します(上限はHRMHRMの価格。手数料がかかります)。\n\n出品できたら、ここへ戻って報告してください。",
+    en: "Next, list something on the Exchange.\n\n1. Put the goods you want to sell in your private shulker.\n2. Hold paper and use a lectern to open the Exchange.\n3. Under Shipping, pull the goods from your private shulker.\n4. List them at the unit price you want (capped at HRMHRM's price; a fee applies).\n\nOnce it is listed, come back here and report."
+  },
+  tutorialExReceiveBody: {
+    ja: "取引所で、何か1つ買って受け取ってみましょう。\n\n1. 取引所で、買いたい品物を選びます。価格は安い順に、プレイヤーの出品 → NPC会社 → HRMHRM → システム出品の順に使われます。\n2. 数を決めて買います。品物は「入荷」に届きます。\n3. 「入荷を受け取る」で、専用シュルカーへ届けます。\n\n品物を受け取れたら、ここへ戻って報告してください。",
+    en: "Let's buy something on the Exchange and receive it.\n\n1. Pick an item. Offers are used cheapest first, in this order: players, NPC companies, HRMHRM, then the system listing.\n2. Choose a quantity and buy. The goods arrive in your Inbox.\n3. Use Receive to deliver them to your private shulker.\n\nOnce you have received them, come back here and report."
+  },
+  tutorialCompanyGuideBody: {
+    ja: "村と会社のしくみです。\n\n・村: 鐘に輝くイカスミを使うと村として登記できます。村の範囲にある職業ブロックで、手作業の生産をして取引所に出品します。村人の数は規模を表すだけです。\n・会社: ロードストーンに輝くイカスミを使うと会社を登記できます(名前は10文字まで、1人1社、登録料がかかります)。会社の口座に資金を入れ、村や会社の依頼・取引所を使って事業をします。\n・会社の口座は、銀行・取引所・クエストと同じエメラルドで動きます。\n\n登録料は口座の残高から払います。準備ができたら報告して、次のステップへ進みましょう。",
+    en: "How villages and companies work.\n\n- Village: use a glow ink sac on a bell to register a village. It hand-crafts goods from the job blocks in its range and lists them on the Exchange. Villager count only shows size.\n- Company: use a glow ink sac on a lodestone to register a company (up to 10 characters, one per player, with a registration fee). Put funds in its account and run it through requests and the Exchange.\n- Company accounts run on the same emeralds as the bank, the Exchange and quests.\n\nThe registration fee is paid from your balance. When you are ready, report and move on."
+  },
+  tutorialCompanyFoundBody: {
+    ja: "最後のステップです。会社を建てましょう。\n\n1. 輝くイカスミを1個用意します。\n2. ロードストーンを置いて、イカスミを持って触ります。\n3. 会社名(10文字まで)を決めて、登記します(登録料は残高から引かれます)。\n\n登記できたら、ここへ戻って報告してください。導入クエストはこれで終わりです。",
+    en: "The last step: found a company.\n\n1. Get one glow ink sac.\n2. Place a lodestone and use the sac on it.\n3. Choose a company name (up to 10 characters) and register it (the fee is taken from your balance).\n\nOnce it is registered, come back here and report. That finishes the introductory quests."
+  },
+  tutorialRewardLine: { ja: (list) => `§b報酬: ${list}§r`, en: (list) => `§bReward: ${list}§r` },
+  tutorialRewardGot: { ja: (list) => `§b報酬を受け取りました: ${list}`, en: (list) => `§bReward received: ${list}` },
+  tutorialNotYetGeneric: { ja: "§cまだ確認できません。やることを済ませてから報告してください。", en: "§cNot confirmed yet. Finish the task, then report." },
   tutorialStepDoneMsg: { ja: (title) => `§a導入クエスト「${title}」を完了しました。`, en: (title) => `§aCompleted the introductory quest "${title}".` },
-  tutorialAllDoneMsg: { ja: "§a導入クエストをすべて完了しました。掲示板から仕事を選んでみましょう。", en: "§aYou finished all the introductory quests. Pick a job from the boards." },
-  tutorialNotYetMsg: { ja: "§cまだ納品が確認できません。仕事を1件、納品してから報告してください。", en: "§cNo delivery found yet. Deliver one job, then report." }
+  tutorialAllDoneMsg: { ja: "§a導入クエストをすべて完了しました。会社の運営、おめでとうございます。", en: "§aYou finished all the introductory quests. Congratulations on your company." },
+  tutorialNotYetMsg: { ja: "§cまだ納品が確認できません。仕事を1件、納品してから報告してください。", en: "§cNo delivery found yet. Deliver one job, then report." },
+
+  // ---- 取引所 / Exchange ----
+  exTitle: { ja: "取引所", en: "Exchange" },
+  exMenuBody: {
+    ja: (cash, credit) => `残高: ${cash}E\nカード利用可能額: ${credit}\n\n§7入荷・出荷には、登録した専用シュルカーが必要です。(本で専用シュルカーをタッチして登録)`,
+    en: (cash, credit) => `Balance: ${cash}E\nCard available: ${credit}\n\n§7Receiving and shipping need a registered private shulker. (Tap a shulker with a book to register.)`
+  },
+  exBtnItems: { ja: "物品別リスト", en: "Browse by Item" },
+  exEntityVillage: { ja: "[村]", en: "[Village]" },
+  exEntityCompany: { ja: "[会社]", en: "[Company]" },
+  coreJobsLine: {
+    ja: (jobs, made) => `職業ブロック: ${jobs}\n先週の加工: ${made}(手工業。足りない原料は、納品か、取引所での買いで)`,
+    en: (jobs, made) => `Job blocks: ${jobs}\nLast week's processing: ${made} (hand-craft scale; missing inputs come from deliveries or exchange purchases)`
+  },
+  exEntityNpc: { ja: "[NPC]", en: "[NPC]" },
+  exBtnSearch: { ja: "品目を検索", en: "Search Items" },
+  exSearchTitle: { ja: "品目を検索", en: "Search Items" },
+  exSearchLabel: { ja: "品名の一部(ひらがな・カタカナ・英語どれでも)", en: "Part of the name (Japanese or English)" },
+  exSearchHint: { ja: "例: ダイヤ / oak", en: "e.g. diamond / oak" },
+  exSearchEmpty: { ja: "§c検索する語を入れてください。", en: "§cEnter a search word." },
+  exSearchNone: { ja: (q) => `§c「${q}」に合う品目がありません。`, en: (q) => `§cNo items match "${q}".` },
+  exSearchResultTitle: { ja: (q) => `検索: ${q}`, en: (q) => `Search: ${q}` },
+  exSearchResultBody: { ja: (n) => `${n}件(多い時は上位40件まで)。選ぶと品目のページへ進みます。`, en: (n) => `${n} result(s) (top 40 shown). Select one to open its page.` },
+  exSearchAgain: { ja: "もう一度検索する", en: "Search Again" },
+  exBtnShip: { ja: "出荷一覧", en: "Outgoing (Ship)" },
+  exBtnInboxN: { ja: (n) => `入荷一覧${n > 0 ? ` (${n}件)` : ""}`, en: (n) => `Incoming${n > 0 ? ` (${n})` : ""}` },
+  exBtnBargain: { ja: "本日のオススメコーナー", en: "Today's Picks" },
+  exBtnCustomer: { ja: "カスタマーサービス", en: "Customer Service" },
+  exBtnLegal: { ja: "リーガルサービス", en: "Legal Service" },
+  exCustomerBody: { ja: "プライム会員とカードの設定です。", en: "Prime membership and card settings." },
+  exBtnPrime: { ja: "プライム会員", en: "Prime Membership" },
+  exBtnCard: { ja: "カード管理", en: "Card Management" },
+  exCatTitle: { ja: "物品別リスト", en: "Browse by Item" },
+  exCatBody: { ja: "選んでください。", en: "Choose one." },
+  exGroupBody: { ja: "小分類を選んでください。", en: "Choose a subcategory." },
+  exGroupLine: { ja: (name, n) => `${name}\n§0${n}品目§r`, en: (name, n) => `${name}\n§0${n} items§r` },
+  exMarkDays: { ja: (n) => `§6[腐る:${n}日]§r`, en: (n) => `§6[Spoils: ${n}d]§r` },
+  exMarkNever: { ja: "§a[腐らない]§r", en: "§a[No spoil]§r" },
+  exMarkBulk: { ja: "§b[バルク]§r", en: "§b[Bulk]§r" },
+  exRareBooksBtn: { ja: "エンチャント本の直接販売(HRMHRM)", en: "Enchanted Books (HRMHRM direct)" },
+  exItemLineNone: { ja: (name) => `${name}\n§0出品 0件§r`, en: (name) => `${name}\n§00 listings§r` },
+  exNoOffersFirst: { ja: "出品はありません。あなたが最初の出品者です。", en: "No listings yet. You can be the first seller." },
+  exBtnListThis: { ja: "出品する(出荷一覧へ)", en: "Sell (go to Outgoing)" },
+  exItemLineMarket: { ja: (name, price, count) => `${name}\n§0相場 ${price}E${count > 0 ? ` / 出品 ${count}件` : ""}§r`, en: (name, price, count) => `${name}\n§0Market ${price}E${count > 0 ? ` / ${count} listings` : ""}§r` },
+  exOfferLineMarket: { ja: (price, lot) => `相場(システム): ${price}E × 無制限${lot > 1 ? `(${lot}個単位)` : ""}`, en: (price, lot) => `Market (system): ${price}E x unlimited${lot > 1 ? ` (lots of ${lot})` : ""}` },
+  exBtnSellMarket: { ja: "相場で売る(プールの品)", en: "Sell at Market (from pool)" },
+  exBtnListThis2: { ja: "出品する", en: "List for Sale" },
+  exPoolItemBody: { ja: (name, n, price) => `${name} × ${n}(プール)\n相場 ${price}E`, en: (name, n, price) => `${name} x ${n} (pool)\nMarket ${price}E` },
+  exSellMarketTitle: { ja: (name, price) => `${name} を相場で売る(${price}E)`, en: (name, price) => `Sell ${name} at market (${price}E)` },
+  exSellMarketLot: { ja: (lot) => `§cこの品は、シュルカー1箱(${lot}個)単位でだけ相場で売れます。`, en: (lot) => `§cThis item sells at market only in lots of ${lot}.` },
+  exSellMarketNoPool: { ja: "§cプールに品がありません。出荷一覧で専用シュルカーから取り込んでください。", en: "§cYour pool is empty. Pull items from your private shulker in Outgoing." },
+  exSellMarketDone: { ja: (name, qty, price, total) => `§b${name} × ${qty} を相場で売りました。(${price}E × ${qty} = +${total}E)`, en: (name, qty, price, total) => `§bSold ${name} x ${qty} at market. (${price}E x ${qty} = +${total}E)` },
+  exSellMarketFailed: { ja: "§c相場で売れませんでした。", en: "§cCould not sell at market." },
+  exBtnFresh: { ja: "生鮮市場(GLB建て)", en: "Fresh Market (GLB)" },
+  exCatIntangible: { ja: "無形資産 (準備中)", en: "Intangible Assets (coming soon)" },
+  exIntangibleMsg: { ja: "§e無形資産は準備中です。", en: "§eIntangible assets are coming soon." },
+  exItemLine: { ja: (name, price, qty, count) => `${name}\n§0最安 ${price}E (在庫 ${qty} / 出品 ${count}件)§r`, en: (name, price, qty, count) => `${name}\n§0From ${price}E (${qty} in stock / ${count} listings)§r` },
+  exNoItems: { ja: "出品中の品がありません。", en: "Nothing is listed here." },
+  exRareGearBtn: { ja: "防具・本などの直接販売(HRMHRM)", en: "Gear & Books (HRMHRM direct)" },
+  exOfferTitle: { ja: (name) => name, en: (name) => name },
+  exOfferBody: {
+    ja: (cash, lines, marks) => `残高: ${cash}E${marks}\n§7最安値の出品から選ばれます。§r\n\n${lines}`,
+    en: (cash, lines, marks) => `Balance: ${cash}E${marks}\n§7Cheapest offers are used first.§r\n\n${lines}`
+  },
+  exOfferLine: { ja: (who, qty, price) => `${who}: ${price}E × ${qty}`, en: (who, qty, price) => `${who}: ${price}E x ${qty}` },
+  exTrendLine: {
+    ja: (spark, last, change) => `§7直近7日の取引§r ${spark}  平均 ${last}E ${change}`,
+    en: (spark, last, change) => `§7Last 7 days§r ${spark}  avg ${last}E ${change}`
+  },
+  exTrendNone: { ja: "§7直近7日の取引: なし§r", en: "§7Last 7 days: no trades§r" },
+  exOfferMore: { ja: (n) => `…ほか ${n}件`, en: (n) => `...and ${n} more` },
+  exBtnBuy: { ja: "購入画面へ", en: "Buy" },
+  exBuyTitle: { ja: (name) => `${name} を買う`, en: (name) => `Buy ${name}` },
+  exBuyConfirmBody: {
+    ja: (name, qty, total, cash, fromCard) => `${name} × ${qty}\n合計 ${total}E\n残高 ${cash}E${fromCard > 0 ? `\n§eカード(リボ)払い ${fromCard}E` : ""}`,
+    en: (name, qty, total, cash, fromCard) => `${name} x ${qty}\nTotal ${total}E\nBalance ${cash}E${fromCard > 0 ? `\n§eCard (revolving) ${fromCard}E` : ""}`
+  },
+  exBtnConfirmBuy: { ja: "購入する", en: "Purchase" },
+  exBuyDone: { ja: (name, qty, total, fromCard) => `§a${name} × ${qty} を購入しました。(${total}E${fromCard > 0 ? ` / うちカード${fromCard}E` : ""})`, en: (name, qty, total, fromCard) => `§aBought ${name} x ${qty}. (${total}E${fromCard > 0 ? `, ${fromCard}E on card` : ""})` },
+  exBuyNoStock: { ja: (n) => `§c在庫が足りません。(買えるのは ${n} 個まで)`, en: (n) => `§cNot enough stock. (Up to ${n} available)` },
+  exBuyNoCash: { ja: "§c残高が足りません。出品者への支払いは、カードでは払えません。", en: "§cNot enough balance. Payments to players cannot go on the card." },
+  exBuyNoCard: { ja: "§c残高が足りず、カードも未発行です。", en: "§cNot enough balance, and no card on file." },
+  exBuySuspended: { ja: "§cカードが利用停止中です。", en: "§cYour card is suspended." },
+  exBuyCreditLimit: { ja: "§c利用限度額を超えています。", en: "§cExceeds your credit limit." },
+  exBuyFailed: { ja: "§c購入できませんでした。", en: "§cCould not purchase." },
+  exDelivered: { ja: (n) => `§a専用シュルカーに ${n} 個届きました。`, en: (n) => `§a${n} item(s) delivered to your private shulker.` },
+  exDeliverPartial: { ja: (n) => `§e専用シュルカーがいっぱいで、${n} 個は入荷一覧に残っています。`, en: (n) => `§eYour shulker is full; ${n} item(s) remain in Incoming.` },
+  exDeliverNoBinding: { ja: "§e専用シュルカーが未登録のため、入荷一覧で待っています。(本でシュルカーをタッチして登録)", en: "§eNo private shulker registered; items wait in Incoming. (Tap a shulker with a book to register.)" },
+  exDeliverUnloaded: { ja: "§e専用シュルカーのある場所が読み込まれていないため、入荷一覧で待っています。", en: "§eYour shulker's chunk is not loaded; items wait in Incoming." },
+  exInboxTitle: { ja: "入荷一覧", en: "Incoming" },
+  exInboxBody: { ja: (lines) => `届く待ちの品です。\n\n${lines}`, en: (lines) => `Items waiting for delivery.\n\n${lines}` },
+  exInboxEmpty: { ja: "届く待ちの品はありません。", en: "Nothing is waiting for delivery." },
+  exBtnDeliver: { ja: "専用シュルカーへ届ける", en: "Deliver to Private Shulker" },
+  exShipTitle: { ja: "出荷一覧", en: "Outgoing" },
+  exShipBody: {
+    ja: (pool, listings, rate) => `取引所プール: ${pool}品目 / 出品中: ${listings}件\n§7プールに入れた品を、値段を付けて出品します。出品時に輸送費(出品額の${Math.round(rate * 100)}%)がかかり、取り下げても戻りません。§r`,
+    en: (pool, listings, rate) => `Exchange pool: ${pool} item type(s) / Listings: ${listings}\n§7Put goods in the pool, then list them at your price. A freight fee (${Math.round(rate * 100)}%) applies when listing and is not refunded.§r`
+  },
+  exBtnPull: { ja: "専用シュルカーから取り込む", en: "Pull from Private Shulker" },
+  exBtnPool: { ja: "プールの品を出品する", en: "List Items from Pool" },
+  exBtnMine: { ja: "自分の出品", en: "My Listings" },
+  exPullBody: { ja: "取り込む品を選んでください。(名前や傷みのある品は取り込めません)", en: "Choose an item to pull. (Renamed or damaged items cannot be pulled.)" },
+  exPullStale: { ja: (lines) => `§c鮮度が足りないため受け付けられません(80%以上が必要):§r\n${lines}`, en: (lines) => `§cNot accepted: not fresh enough (80% or more is required):§r\n${lines}` },
+  exPullStaleDone: { ja: (name, n) => `§c${name} × ${n} は、鮮度が足りないため受け付けられません(80%以上が必要)。シュルカーに残っています。`, en: (name, n) => `§c${name} x ${n} not accepted: not fresh enough (80% or more is required). It stays in the shulker.` },
+  exPullEmpty: { ja: "取り込める品が専用シュルカーにありません。", en: "No pullable items in your private shulker." },
+  exPullDone: { ja: (name, n) => `§a${name} × ${n} を取引所プールへ取り込みました。`, en: (name, n) => `§aMoved ${name} x ${n} into the exchange pool.` },
+  exPullNoBinding: { ja: "§c専用シュルカーが未登録です。本でシュルカーをタッチして登録してください。", en: "§cNo private shulker registered. Tap a shulker with a book." },
+  exPullUnloaded: { ja: "§c専用シュルカーのある場所が読み込まれていません。近くへ行ってください。", en: "§cYour shulker's chunk is not loaded. Go near it." },
+  exPoolBody: { ja: "出品する品を選んでください。", en: "Choose an item to list." },
+  exPoolEmpty: { ja: "プールに品がありません。先に取り込んでください。", en: "The pool is empty. Pull items first." },
+  exPoolLine: { ja: (name, n) => `${name}\n§0プール ${n}個§r`, en: (name, n) => `${name}\n§0${n} in pool§r` },
+  exListTitle: { ja: (name) => `${name} を出品`, en: (name) => `List ${name}` },
+  exListQtyLabel: { ja: (max) => `数量(最大 ${max})`, en: (max) => `Quantity (max ${max})` },
+  exListPriceLabel: { ja: (cap) => `1個の値段(E・上限 ${cap}E)`, en: (cap) => `Unit price (E, max ${cap}E)` },
+  exListInvalid: { ja: "§c数量か値段が正しくありません。", en: "§cInvalid quantity or price." },
+  exListConfirmBody: { ja: (name, qty, price, fee) => `${name} × ${qty}\n1個 ${price}E / 輸送費 ${fee}E(戻りません)`, en: (name, qty, price, fee) => `${name} x ${qty}\n${price}E each / freight ${fee}E (non-refundable)` },
+  exBtnConfirmList: { ja: "出品する", en: "List" },
+  exListDone: { ja: (name, qty, price, fee) => `§a${name} × ${qty} を ${price}E で出品しました。(輸送費 ${fee}E)`, en: (name, qty, price, fee) => `§aListed ${name} x ${qty} at ${price}E. (Freight ${fee}E)` },
+  exListHigh: { ja: (cap) => `§c値段が高すぎます。上限は ${cap}E です。`, en: (cap) => `§cPrice too high. Max is ${cap}E.` },
+  exListNoPool: { ja: "§cプールの数が足りません。", en: "§cNot enough in the pool." },
+  exListTooMany: { ja: "§c出品できる件数の上限です。", en: "§cYou have reached the listing limit." },
+  exListBoardFull: { ja: "§cこの品の出品棚がいっぱいです。", en: "§cThe board for this item is full." },
+  exListNoCash: { ja: (fee) => `§c輸送費 ${fee}E が払えません。`, en: (fee) => `§cCannot pay the ${fee}E freight fee.` },
+  exMineTitle: { ja: "自分の出品", en: "My Listings" },
+  exMineEmpty: { ja: "出品中の品はありません。", en: "You have nothing listed." },
+  exMineLine: { ja: (name, qty, price, left) => `${name} × ${qty} (${price}E)\n§0あと${left}日で期限§r`, en: (name, qty, price, left) => `${name} x ${qty} (${price}E)\n§0${left} day(s) left§r` },
+  exCancelBody: { ja: (name, qty, price) => `${name} × ${qty} (${price}E) を取り下げますか?\n残りの品はプールへ戻ります。輸送費は戻りません。`, en: (name, qty, price) => `Withdraw ${name} x ${qty} (${price}E)?\nGoods return to the pool. Freight is not refunded.` },
+  exBtnCancelListing: { ja: "取り下げる", en: "Withdraw" },
+  exCancelDone: { ja: (name, n) => `§a${name} × ${n} をプールへ戻しました。`, en: (name, n) => `§aReturned ${name} x ${n} to the pool.` },
+  exCancelFailed: { ja: "§c取り下げられませんでした。(すでに売れた可能性があります)", en: "§cCould not withdraw. (It may have sold.)" }
 };
